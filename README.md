@@ -23,16 +23,11 @@ Nginx Configuration
 
 The configuration section for your media vhost could look something like this:
 
-
-    location @image {
-        proxy_pass http://127.0.0.1:8000/database/port/;
-    }    
-
     location ^~ /media/ {
          proxy_set_header X-Real-IP $remote_addr;
          proxy_set_header X-Forwarded-For $remote_addr;
          proxy_set_header Host $http_host;
-         try_files $uri @image;
+         proxy_pass http://127.0.0.1:8000/socialvoyce_staging/27017/;
     }
     
 Cross compilation
