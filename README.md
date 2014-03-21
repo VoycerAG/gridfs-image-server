@@ -27,7 +27,7 @@ The configuration section for your media vhost could look something like this:
          proxy_set_header X-Real-IP $remote_addr;
          proxy_set_header X-Forwarded-For $remote_addr;
          proxy_set_header Host $http_host;
-         proxy_pass http://127.0.0.1:8000/socialvoyce_staging/27017/;
+         proxy_pass http://127.0.0.1:8000/mongo_database/27017/;
     }
     
 Cross compilation
