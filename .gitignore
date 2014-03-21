@@ -3,3 +3,4 @@ bin/
 src/*
 !src/voycer.com
 !src/voycer.com/*
+image-server.linux.x64

@@ -1,0 +1,1 @@
+source ~/golang-crosscompile/crosscompile.bash && cd src/voycer.com && go-linux-amd64 build && mv ../../src/voycer.com/voycer.com ../../image-server.linux.x64 
