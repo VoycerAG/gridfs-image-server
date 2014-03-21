@@ -1,9 +1,11 @@
 package main
 
 import (
+	"os"
 	"voycer.com/server"
 )
 
 func main() {
-	server.Deliver()
+	exitCode := server.Deliver()
+	os.Exit(exitCode)
 }

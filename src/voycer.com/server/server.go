@@ -1,74 +1,42 @@
 package server
 
 import (
-	"encoding/xml"
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
-	"html"
 	"io"
-	"io/ioutil"
 	"labix.org/v2/mgo"
+	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
-var ServerConfiguration Config
+var Connection *mgo.Session
 
-type Config struct {
-	Database   string
-	Host       string
-	Port       int
-	ListenPort int
-	Route      string
-}
-
-func HandleError(err error) {
-	if err != nil {
-		fmt.Printf("[ERROR] Error occured: %s\n", err)
-	}
-}
-
-func indexHandler(w http.ResponseWriter, r *http.Request) {
+// just a static welcome handler
+func welcomeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<html>")
 	fmt.Fprintf(w, "<h1>Image Server.</h1>")
 	fmt.Fprintf(w, "</html>")
 }
 
-func hasCached(etag string, md5 string, modifiedTime time.Time, updateTime time.Time) bool {
-	if updateTime.After(modifiedTime) || md5 != etag {
-		return false
-	}
-
-	return true
-}
-
-func ReadConfiguration() (Config, error) {
-	filename := "configuration.xml"
-	xmlFile, err := os.Open(filename)
-	if err != nil {
-		return Config{}, errors.New(fmt.Sprintf("[ERROR] configuration file could not be found [%s]", filename))
-	}
-	defer xmlFile.Close()
-
-	b, _ := ioutil.ReadAll(xmlFile)
-
-	var q Config
-	xml.Unmarshal(b, &q)
-	return q, nil
-}
-
-func mongoHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("[DEBUG] Access on %s\n", html.EscapeString(r.URL.Path))
-
-	host := ServerConfiguration.Host
-	database := ServerConfiguration.Database
-	session, err := mgo.Dial(host)
-	HandleError(err)
-	session.SetMode(mgo.Monotonic, true)
-
+//
+func imageHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+
+	database := vars["database"]
+
+	if database == "" {
+		log.Fatal("database must not be empty")
+		return
+	}
+
+	port := vars["port"]
+
+	if port == "" {
+		port = "27017"
+	}
 
 	filename := vars["image"]
 
@@ -77,10 +45,8 @@ func mongoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gridfs := session.DB(database).GridFS("fs")
+	gridfs := Connection.DB(database).GridFS("fs")
 	fp, err := gridfs.Open(filename)
-
-	HandleError(err)
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -130,22 +96,42 @@ func mongoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Deliver() {
-	var err error
-	ServerConfiguration, err = ReadConfiguration()
+//
+func Deliver() int {
+	err := errors.New("")
+
+	serverPort := flag.Int("port", 8000, "the server port where we will serve images")
+	host := flag.String("host", "localhost", "the database host")
+
+	flag.Parse()
+
+	fmt.Printf("Server started. Listening on %d database host is %s\n", *serverPort, *host)
+
+	// in order to simple configure the image server in the proxy configuration of nginx
+	// we will be getting every database variable from the request
+	serverRoute := "/{database}/{port}/{image}"
+
+	Connection, err = mgo.Dial(*host)
+	Connection.SetMode(mgo.Eventual, true)
+	Connection.SetSyncTimeout(0)
 
 	if err != nil {
-		fmt.Print(err)
-		return
+		log.Fatal("Cannot connect to database")
+		return -1
 	}
 
-	fmt.Printf("[INFO] Database [%s] Host [%s] Port [%d]\n", ServerConfiguration.Database, ServerConfiguration.Host, ServerConfiguration.Port)
-	fmt.Printf("[INFO] Serving on Route %s\n", ServerConfiguration.Route)
-
 	r := mux.NewRouter()
-	r.HandleFunc("/", indexHandler)
-	r.HandleFunc(ServerConfiguration.Route, mongoHandler)
+	r.HandleFunc("/", welcomeHandler)
+	r.HandleFunc(serverRoute, imageHandler)
+
 	http.Handle("/", r)
-	fmt.Printf("[INFO] Image server started on Port %d\n", ServerConfiguration.ListenPort)
-	http.ListenAndServe(fmt.Sprintf(":%d", ServerConfiguration.ListenPort), nil)
+
+	err = http.ListenAndServe(fmt.Sprintf(":%d", *serverPort), nil)
+
+	if err != nil {
+		log.Fatal(err)
+		return -1
+	}
+
+	return 0
 }
