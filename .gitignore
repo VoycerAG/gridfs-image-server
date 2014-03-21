@@ -1,0 +1,5 @@
+pkg/
+bin/
+src/*
+!src/voycer.com
+!src/voycer.com/*
