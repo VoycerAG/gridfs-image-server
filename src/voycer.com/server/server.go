@@ -21,6 +21,14 @@ func welcomeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</html>")
 }
 
+func hasCached(etag string, md5 string, modifiedTime time.Time, updateTime time.Time) bool {
+	if updateTime.After(modifiedTime) || md5 != etag {
+		return false
+	}
+
+	return true
+}
+
 //
 func imageHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -88,7 +96,6 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(w, fp)
 
-	HandleError(err)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Printf("[ERROR][500] Bad Request for %s\n", md5)
