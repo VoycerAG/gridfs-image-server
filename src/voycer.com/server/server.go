@@ -215,6 +215,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 			fp, imgErr = gridfs.Create(targetFilename)
 
 			if imgErr != nil {
+				defer fp.Close()
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -233,6 +234,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 
 			query := bson.M{"_id": fp.Id()}
 
+			// add aditional fields
 			updateErr := Connection.DB(database).C("fs.files").Update(query, change)
 
 			if updateErr != nil {
