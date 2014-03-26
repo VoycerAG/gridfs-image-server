@@ -1,18 +1,37 @@
 package server
 
 import (
+	"code.google.com/p/graphics-go/graphics"
+	_ "crypto/sha256"
+	_ "encoding/base64"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
+	"image"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
 	"io"
 	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 var Connection *mgo.Session
+
+type GridFile struct {
+	mgo.GridFile
+
+	mimeType string
+}
+
+func (file *GridFile) SetMimeType(mimeType string) {
+	file.mimeType = mimeType
+}
 
 // just a static welcome handler
 func welcomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +49,7 @@ func hasCached(etag string, md5 string, modifiedTime time.Time, updateTime time.
 }
 
 //
-func imageHandler(w http.ResponseWriter, r *http.Request) {
+func legacyHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	database := vars["database"]
@@ -104,6 +123,182 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //
+func imageHandler(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+
+	database := vars["database"]
+
+	if database == "" {
+		log.Fatal("database must not be empty")
+		return
+	}
+
+	port := vars["port"]
+
+	if port == "" {
+		port = "27017"
+	}
+
+	objectId := vars["objectId"]
+
+	if objectId == "" {
+		fmt.Printf("objectId is empty.")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	width := vars["width"]
+
+	if width == "" {
+		fmt.Printf("width is empty.")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	height := vars["height"]
+
+	if height == "" {
+		fmt.Printf("height is empty.")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	var parseError error
+	var intWidth, intHeight int64
+
+	intWidth, parseError = strconv.ParseInt(width, 10, 64)
+
+	if parseError != nil {
+		fmt.Printf("parse error")
+		return
+	}
+
+	intHeight, parseError = strconv.ParseInt(height, 10, 64)
+
+	if parseError != nil {
+		fmt.Printf("parse error")
+		return
+	}
+
+	gridfs := Connection.DB(database).GridFS("fs")
+
+	var fp *mgo.GridFile
+
+	mongoId := bson.ObjectIdHex(objectId)
+	query := bson.M{"parentId": mongoId, "width": intWidth, "height": intHeight}
+	iter := gridfs.Find(query).Iter()
+	gridfs.OpenNext(iter, &fp)
+
+	if fp == nil {
+
+		// schema valid? ist 130x260 erlaubt. Wenn ja: generiere und speichere und liefer aus
+
+		// todo find via id but parentId must be null
+		fp, _ = gridfs.OpenId(mongoId)
+
+		if fp != nil {
+			fmt.Printf("parent found")
+
+			imageSrc, something, imgErr := image.Decode(fp)
+
+			if imgErr != nil {
+				fmt.Printf("Error is %s", imgErr)
+				return
+			}
+
+			fmt.Printf("Something is %s", something)
+
+			dst := image.NewRGBA(image.Rect(0, 0, int(intWidth), int(intHeight)))
+			graphics.Thumbnail(dst, imageSrc)
+			targetFilename := fmt.Sprintf("%d", time.Now().Nanosecond())
+			fp, imgErr = gridfs.Create(targetFilename)
+
+			if imgErr != nil {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			change := bson.M{
+				"$set": bson.M{
+					"parentId": mongoId,
+					"mimeType": "image/jpeg",
+					"width":    int(intWidth),
+					"height":   int(intHeight),
+					"size":     fmt.Sprintf("%dx%d", intWidth, intHeight)}}
+
+			jpeg.Encode(fp, dst, &jpeg.Options{jpeg.DefaultQuality})
+
+			fp.Close()
+
+			query := bson.M{"_id": fp.Id()}
+
+			updateErr := Connection.DB(database).C("fs.files").Update(query, change)
+
+			if updateErr != nil {
+				fmt.Printf("\n - Error %s - \n", updateErr)
+			}
+
+			fp, _ = gridfs.OpenId(fp.Id())
+
+			if fp != nil {
+				defer fp.Close()
+			} else {
+				fmt.Printf("generated image could not be found")
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+		} else {
+			// ansonsten:
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	} else {
+		// if the file pointer is not set, fp.Close() throws an error.. FIX this upstream?
+		defer fp.Close()
+	}
+
+	md5 := fp.MD5()
+
+	modifiedHeader := r.Header.Get("If-Modified-Since")
+	modifiedTime := time.Now()
+	cachingEnabled := r.Header.Get("Cache-Control") != "no-cache"
+
+	if modifiedHeader != "" {
+		modifiedHeader = ""
+	} else {
+		modifiedTime, _ = time.Parse(time.RFC1123, modifiedHeader)
+	}
+
+	if hasCached(md5, r.Header.Get("If-None-Match"), modifiedTime, fp.UploadDate()) && cachingEnabled {
+		w.WriteHeader(http.StatusNotModified)
+		fmt.Printf("[DEBUG][304] Returning cached image for %s\n", md5)
+		return
+	}
+
+	w.Header().Set("Etag", md5)
+	w.Header().Set("Cache-Control", "max-age=315360000")
+	d, _ := time.ParseDuration("315360000s")
+
+	expires := fp.UploadDate().Add(d)
+
+	w.Header().Set("Last-Modified", fp.UploadDate().Format(time.RFC1123))
+	w.Header().Set("Expires", expires.Format(time.RFC1123))
+	w.Header().Set("Date", fp.UploadDate().Format(time.RFC1123))
+
+	fmt.Printf("[DEBUG][200] Returning raw image for %s\n", md5)
+
+	_, err := io.Copy(w, fp)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("[ERROR][500] Bad Request for %s\n", md5)
+		return
+	}
+}
+
+//
 func Deliver() int {
 	err := errors.New("")
 
@@ -116,7 +311,9 @@ func Deliver() int {
 
 	// in order to simple configure the image server in the proxy configuration of nginx
 	// we will be getting every database variable from the request
-	serverRoute := "/{database}/{port}/{image}"
+	serverRoute := "/{database}/{port}/{objectId}/{width}/{height}.jpg"
+
+	fallbackRoute := "/{database}/{port}/{image}"
 
 	Connection, err = mgo.Dial(*host)
 	Connection.SetMode(mgo.Eventual, true)
@@ -130,6 +327,7 @@ func Deliver() int {
 	r := mux.NewRouter()
 	r.HandleFunc("/", welcomeHandler)
 	r.HandleFunc(serverRoute, imageHandler)
+	r.HandleFunc(fallbackRoute, legacyHandler)
 
 	http.Handle("/", r)
 
