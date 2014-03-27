@@ -273,14 +273,12 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 
 //
 func Deliver() int {
-	configuration, err := config.CreateConfigFromFile("example.json")
+	_, err := config.CreateConfigFromFile("example.json")
 
 	if err != nil {
 		fmt.Printf("Error %s", err)
 		return -2
 	}
-
-	fmt.Printf("%s", configuration)
 
 	serverPort := flag.Int("port", 8000, "the server port where we will serve images")
 	host := flag.String("host", "localhost", "the database host")

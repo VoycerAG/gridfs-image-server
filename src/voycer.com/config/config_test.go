@@ -2,18 +2,26 @@ package config
 
 import (
 	"io/ioutil"
+	. "launchpad.net/gocheck"
 	"os"
 	"syscall"
 	"testing"
 )
 
-// utility function for setup a example configuration
-func createTemporaryConfiguration(t *testing.T) (*os.File, error) {
+// Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
+type TestSuite struct{}
+
+var _ = Suite(&TestSuite{})
+
+func Test(t *testing.T) {
+	TestingT(t)
+}
+
+// createConfiguration is an utility function for setup of an example configuration.
+func createConfiguration(c *C) (*os.File, error) {
 	f, err := ioutil.TempFile("", "test.json")
 
-	if err != nil {
-		t.Errorf("tempfile could not be created")
-	}
+	c.Assert(err, IsNil)
 
 	exampleConfig := `{
 	"allowedEntries" : [
@@ -31,84 +39,56 @@ func createTemporaryConfiguration(t *testing.T) (*os.File, error) {
 }`
 
 	err = ioutil.WriteFile(f.Name(), []byte(exampleConfig), 0777)
-	if err != nil {
-		t.Errorf("example config could not be written")
-	}
+
+	c.Assert(err, IsNil)
 
 	return f, err
 }
 
-func TestCreateConfigFromFile(t *testing.T) {
-	f, setupErr := createTemporaryConfiguration(t)
+// TestOpenFileErrorOnFail tests openFile to return an error.
+func (s *TestSuite) TestOpenFileErrorOnFail(c *C) {
+	_, err := openFile("/")
 
-	if setupErr != nil {
-		t.Errorf("example config could not be written")
-	}
+	expected := "read /: is a directory"
+
+	c.Assert(err, ErrorMatches, expected)
+}
+
+// TestCreateConfigFromFile tests that a config file can be created and has entries.
+func (s *TestSuite) TestCreateConfigFromFile(c *C) {
+	f, setupErr := createConfiguration(c)
+
+	c.Assert(setupErr, IsNil)
 
 	//cleanup temp file
 	defer syscall.Unlink(f.Name())
 
 	configObject, err := CreateConfigFromFile(f.Name())
 
-	if err != nil {
-		t.Errorf("loading failed because of %s", err)
-	}
-
-	if len(configObject.AllowedEntries) != 2 {
-		t.Errorf("not all config entries could be loaded")
-	}
-
+	c.Assert(err, IsNil, Commentf("loading failed because of %s", err))
+	c.Assert(configObject.AllowedEntries, HasLen, 2)
 }
 
-func TestCreateConfigFromFileOpenFileFailed(t *testing.T) {
+// TestCreateConfigFromFileOpenFileFailed tests that opening an invalid file will fail.
+func (s *TestSuite) TestCreateConfigFromFileOpenFileFailed(c *C) {
 	configObject, err := CreateConfigFromFile("/")
-
-	if err == nil {
-		t.Errorf("error must be nil")
-	}
+	c.Assert(err, NotNil)
 
 	expected := "read /: is a directory"
 
-	if err.Error() != expected {
-		t.Errorf("invalid message %s != %s", err, expected)
-	}
-
-	if len(configObject.AllowedEntries) != 0 {
-		t.Error("configObject should be empty.")
-	}
+	c.Assert(err, ErrorMatches, expected)
+	c.Assert(configObject.AllowedEntries, HasLen, 0)
 }
 
-func TestOpenFileErrorOnFail(t *testing.T) {
-	_, err := openFile("/")
-
-	if err == nil {
-		t.Errorf("error must be nil")
-	}
-
-	expected := "read /: is a directory"
-
-	if err.Error() != expected {
-		t.Errorf("invalid message %s != %s", err, expected)
-	}
-}
-
-func TestOpenFileSuccessCase(t *testing.T) {
-	f, setupErr := createTemporaryConfiguration(t)
-
-	if setupErr != nil {
-		t.Errorf("example config could not be written")
-	}
+// TestOpenFileSuccessCase tests a successful file can be openeded and has the real length.
+func (s *TestSuite) TestOpenFileSuccessCase(c *C) {
+	f, setupErr := createConfiguration(c)
+	c.Assert(setupErr, IsNil)
 
 	//cleanup temp file
 	defer syscall.Unlink(f.Name())
 
 	stream, err := openFile(f.Name())
-
-	if err != nil {
-		t.Errorf("file could not be loaded")
-	}
-
-	if len(stream) != 165 {
-		t.Errorf("read configuration does not match written one")
-	}
+	c.Assert(err, IsNil)
+	c.Assert(stream, HasLen, 165)
 }
