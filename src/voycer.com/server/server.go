@@ -22,6 +22,7 @@ import (
 )
 
 var Connection *mgo.Session
+var Configuration *config.Config
 
 // just a static welcome handler
 func welcomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -278,7 +279,9 @@ func Deliver() int {
 
 	flag.Parse()
 
-	_, err := config.CreateConfigFromFile(*configurationFilepath)
+	var err error
+
+	Configuration, err = config.CreateConfigFromFile(*configurationFilepath)
 
 	if err != nil {
 		fmt.Printf("Error %s", err)
