@@ -1,2 +1,2 @@
 all:
-	go test -v voycer.com/config
+	go test -v VoycerAG/config

@@ -1,8 +1,8 @@
 package main
 
 import (
+	"VoycerAG/server"
 	"os"
-	"voycer.com/server"
 )
 
 func main() {

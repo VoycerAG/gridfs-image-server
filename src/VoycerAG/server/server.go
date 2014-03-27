@@ -1,6 +1,7 @@
 package server
 
 import (
+	"VoycerAG/config"
 	"code.google.com/p/graphics-go/graphics"
 	_ "crypto/sha256"
 	_ "encoding/base64"
@@ -18,7 +19,6 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-	"voycer.com/config"
 )
 
 var Connection *mgo.Session

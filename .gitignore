@@ -1,7 +1,7 @@
 pkg/
 bin/
 src/*
-!src/voycer.com
-!src/voycer.com/*
+!src/VoycerAG
+!src/VoycerAG/*
 image-server.linux.x64
 .idea
