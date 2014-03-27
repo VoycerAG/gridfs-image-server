@@ -15,20 +15,11 @@ type Entry struct {
 	Height int64  `json:height`
 }
 
-func openFile(file string) ([]byte, error) {
-	configFile, err := ioutil.ReadFile(file)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return configFile, nil
-}
-
+// CreateConfigFromFile returns an Config object from a given file
 func CreateConfigFromFile(file string) (*Config, error) {
 	result := Config{}
 
-	config, err := openFile(file)
+	config, err := ioutil.ReadFile(file)
 
 	if err != nil {
 		return &result, err

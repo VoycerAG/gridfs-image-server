@@ -223,7 +223,6 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 		} else {
-			// ansonsten:
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -273,17 +272,18 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 
 //
 func Deliver() int {
-	_, err := config.CreateConfigFromFile("example.json")
+	configurationFilepath := flag.String("config", "configuration.json", "path to the configuration file")
+	serverPort := flag.Int("port", 8000, "the server port where we will serve images")
+	host := flag.String("host", "localhost", "the database host")
+
+	flag.Parse()
+
+	_, err := config.CreateConfigFromFile(*configurationFilepath)
 
 	if err != nil {
 		fmt.Printf("Error %s", err)
 		return -2
 	}
-
-	serverPort := flag.Int("port", 8000, "the server port where we will serve images")
-	host := flag.String("host", "localhost", "the database host")
-
-	flag.Parse()
 
 	fmt.Printf("Server started. Listening on %d database host is %s\n", *serverPort, *host)
 

@@ -9,17 +9,21 @@ import (
 )
 
 // Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
-type TestSuite struct{}
+// Bootstrap unit test suite.
+type ConfigTestSuite struct{}
 
-var _ = Suite(&TestSuite{})
+var testfile *os.File
+var _ = Suite(&ConfigTestSuite{})
 
 func Test(t *testing.T) {
 	TestingT(t)
 }
 
-// createConfiguration is an utility function for setup of an example configuration.
-func createConfiguration(c *C) (*os.File, error) {
-	f, err := ioutil.TempFile("", "test.json")
+// SetUpTest creates a test file for all tests to use.
+func (s *ConfigTestSuite) SetUpTest(c *C) {
+	var err error
+
+	testfile, err = ioutil.TempFile("", "test.json")
 
 	c.Assert(err, IsNil)
 
@@ -38,16 +42,19 @@ func createConfiguration(c *C) (*os.File, error) {
 	]
 }`
 
-	err = ioutil.WriteFile(f.Name(), []byte(exampleConfig), 0777)
+	err = ioutil.WriteFile(testfile.Name(), []byte(exampleConfig), 0777)
 
 	c.Assert(err, IsNil)
+}
 
-	return f, err
+// TearDownTest removes the created test file.
+func (s *ConfigTestSuite) TearDownTest(c *C) {
+	defer syscall.Unlink(testfile.Name())
 }
 
 // TestOpenFileErrorOnFail tests openFile to return an error.
-func (s *TestSuite) TestOpenFileErrorOnFail(c *C) {
-	_, err := openFile("/")
+func (s *ConfigTestSuite) TestOpenFileErrorOnFail(c *C) {
+	_, err := CreateConfigFromFile("/")
 
 	expected := "read /: is a directory"
 
@@ -55,13 +62,9 @@ func (s *TestSuite) TestOpenFileErrorOnFail(c *C) {
 }
 
 // TestCreateConfigFromFile tests that a config file can be created and has entries.
-func (s *TestSuite) TestCreateConfigFromFile(c *C) {
-	f, setupErr := createConfiguration(c)
-
-	c.Assert(setupErr, IsNil)
-
-	//cleanup temp file
-	defer syscall.Unlink(f.Name())
+func (s *ConfigTestSuite) TestCreateConfigFromFile(c *C) {
+	f := testfile
+	c.Assert(f, FitsTypeOf, &os.File{})
 
 	configObject, err := CreateConfigFromFile(f.Name())
 
@@ -70,7 +73,7 @@ func (s *TestSuite) TestCreateConfigFromFile(c *C) {
 }
 
 // TestCreateConfigFromFileOpenFileFailed tests that opening an invalid file will fail.
-func (s *TestSuite) TestCreateConfigFromFileOpenFileFailed(c *C) {
+func (s *ConfigTestSuite) TestCreateConfigFromFileOpenFileFailed(c *C) {
 	configObject, err := CreateConfigFromFile("/")
 	c.Assert(err, NotNil)
 
@@ -78,17 +81,4 @@ func (s *TestSuite) TestCreateConfigFromFileOpenFileFailed(c *C) {
 
 	c.Assert(err, ErrorMatches, expected)
 	c.Assert(configObject.AllowedEntries, HasLen, 0)
-}
-
-// TestOpenFileSuccessCase tests a successful file can be openeded and has the real length.
-func (s *TestSuite) TestOpenFileSuccessCase(c *C) {
-	f, setupErr := createConfiguration(c)
-	c.Assert(setupErr, IsNil)
-
-	//cleanup temp file
-	defer syscall.Unlink(f.Name())
-
-	stream, err := openFile(f.Name())
-	c.Assert(err, IsNil)
-	c.Assert(stream, HasLen, 165)
 }
