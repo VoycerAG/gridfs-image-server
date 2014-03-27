@@ -70,6 +70,20 @@ func (s *ConfigTestSuite) TestCreateConfigFromFile(c *C) {
 
 	c.Assert(err, IsNil, Commentf("loading failed because of %s", err))
 	c.Assert(configObject.AllowedEntries, HasLen, 2)
+
+	firstEntry := configObject.AllowedEntries[0]
+	c.Assert(firstEntry, FitsTypeOf, Entry{})
+
+	secondEntry := configObject.AllowedEntries[1]
+	c.Assert(secondEntry, FitsTypeOf, Entry{})
+
+	c.Assert(firstEntry.Name, Equals, "peter")
+	c.Assert(firstEntry.Width, Equals, int64(100))
+	c.Assert(firstEntry.Height, Equals, int64(200))
+
+	c.Assert(secondEntry.Name, Equals, "stefan")
+	c.Assert(secondEntry.Width, Equals, int64(200))
+	c.Assert(secondEntry.Height, Equals, int64(300))
 }
 
 // TestCreateConfigFromFileOpenFileFailed tests that opening an invalid file will fail.
