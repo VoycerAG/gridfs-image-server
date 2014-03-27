@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"io/ioutil"
+	"errors"
 )
 
 type Config struct {
@@ -28,4 +29,16 @@ func CreateConfigFromFile(file string) (*Config, error) {
 	err = json.Unmarshal(config, &result)
 
 	return &result, err
+}
+
+func (config *Config) GetElementByName(name string) (Entry, error) {
+	for _, element := range config.AllowedEntries {
+		if element.Name == name {
+			return element, nil
+		}
+	}
+
+	err := errors.New("No element matched")
+
+	return Entry{}, err
 }

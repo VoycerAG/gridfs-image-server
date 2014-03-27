@@ -30,13 +30,13 @@ func (s *ConfigTestSuite) SetUpTest(c *C) {
 	exampleConfig := `{
 	"allowedEntries" : [
 		{
-			"name" : "peter", 
-			"width" : 100, 
+			"name" : "peter",
+			"width" : 100,
 			"height" : 200
 		}, 
 		{
-			"name" : "stefan", 
-			"width" : 200, 
+			"name" : "stefan",
+			"width" : 200,
 			"height" : 300
 		}
 	]
@@ -95,4 +95,31 @@ func (s *ConfigTestSuite) TestCreateConfigFromFileOpenFileFailed(c *C) {
 
 	c.Assert(err, ErrorMatches, expected)
 	c.Assert(configObject.AllowedEntries, HasLen, 0)
+}
+
+// TestGetConfigElementByName tests that the config element can return a specific configuration element by its name
+func (s *ConfigTestSuite) TestGetConfigElementByName(c *C) {
+	f := testfile
+	c.Assert(f, FitsTypeOf, &os.File{})
+
+	configObject, _ := CreateConfigFromFile(f.Name())
+
+	stefanConfigElement, err := configObject.GetElementByName("stefan")
+
+	c.Assert(err, IsNil)
+	c.Assert(stefanConfigElement, FitsTypeOf, Entry{})
+	c.Assert(stefanConfigElement.Width, Equals, int64(200))
+	c.Assert(stefanConfigElement.Height, Equals, int64(300))
+
+	peterConfigElement, err := configObject.GetElementByName("peter")
+
+	c.Assert(err, IsNil)
+	c.Assert(peterConfigElement, FitsTypeOf, Entry{})
+	c.Assert(peterConfigElement.Width, Equals, int64(100))
+	c.Assert(peterConfigElement.Height, Equals, int64(200))
+
+	notExistingElement, err := configObject.GetElementByName("notExisting")
+
+	c.Assert(err, NotNil)
+	c.Assert(notExistingElement, Equals, Entry{})
 }
