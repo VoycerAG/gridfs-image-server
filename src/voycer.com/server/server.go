@@ -4,14 +4,13 @@ import (
 	"code.google.com/p/graphics-go/graphics"
 	_ "crypto/sha256"
 	_ "encoding/base64"
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
 	"image"
 	_ "image/gif"
 	"image/jpeg"
-	_ "image/png"
+	"image/png"
 	"io"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
@@ -19,19 +18,10 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"voycer.com/config"
 )
 
 var Connection *mgo.Session
-
-type GridFile struct {
-	mgo.GridFile
-
-	mimeType string
-}
-
-func (file *GridFile) SetMimeType(mimeType string) {
-	file.mimeType = mimeType
-}
 
 // just a static welcome handler
 func welcomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -124,7 +114,6 @@ func legacyHandler(w http.ResponseWriter, r *http.Request) {
 
 //
 func imageHandler(w http.ResponseWriter, r *http.Request) {
-
 	vars := mux.Vars(r)
 
 	database := vars["database"]
@@ -141,25 +130,10 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	objectId := vars["objectId"]
-
-	if objectId == "" {
-		fmt.Printf("objectId is empty.")
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
 	width := vars["width"]
-
-	if width == "" {
-		fmt.Printf("width is empty.")
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
 	height := vars["height"]
 
-	if height == "" {
-		fmt.Printf("height is empty.")
+	if objectId == "" || width == "" || height == "" {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -186,12 +160,11 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	var fp *mgo.GridFile
 
 	mongoId := bson.ObjectIdHex(objectId)
-	query := bson.M{"parentId": mongoId, "width": intWidth, "height": intHeight}
+	query := bson.M{"metadata.parentId": mongoId, "metadata.width": intWidth, "metadata.height": intHeight}
 	iter := gridfs.Find(query).Iter()
 	gridfs.OpenNext(iter, &fp)
 
 	if fp == nil {
-
 		// schema valid? ist 130x260 erlaubt. Wenn ja: generiere und speichere und liefer aus
 
 		// todo find via id but parentId must be null
@@ -200,14 +173,12 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 		if fp != nil {
 			fmt.Printf("parent found")
 
-			imageSrc, something, imgErr := image.Decode(fp)
+			imageSrc, imageFormat, imgErr := image.Decode(fp)
 
 			if imgErr != nil {
 				fmt.Printf("Error is %s", imgErr)
 				return
 			}
-
-			fmt.Printf("Something is %s", something)
 
 			dst := image.NewRGBA(image.Rect(0, 0, int(intWidth), int(intHeight)))
 			graphics.Thumbnail(dst, imageSrc)
@@ -220,26 +191,26 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			change := bson.M{
-				"$set": bson.M{
-					"parentId": mongoId,
-					"mimeType": "image/jpeg",
-					"width":    int(intWidth),
-					"height":   int(intHeight),
-					"size":     fmt.Sprintf("%dx%d", intWidth, intHeight)}}
+			metadata := bson.M{
+				"parentId": mongoId,
+				"width":    int(intWidth),
+				"height":   int(intHeight),
+				"size":     fmt.Sprintf("%dx%d", intWidth, intHeight)}
 
-			jpeg.Encode(fp, dst, &jpeg.Options{jpeg.DefaultQuality})
+			fp.SetContentType(fmt.Sprintf("image/%s", imageFormat))
+
+			fp.SetMeta(metadata)
+
+			if imageFormat == "png" {
+				png.Encode(fp, dst)
+			} else if imageFormat == "jpeg" {
+				jpeg.Encode(fp, dst, &jpeg.Options{jpeg.DefaultQuality})
+			} else {
+				fmt.Printf("invalid image type %s", imageFormat)
+				return
+			}
 
 			fp.Close()
-
-			query := bson.M{"_id": fp.Id()}
-
-			// add aditional fields
-			updateErr := Connection.DB(database).C("fs.files").Update(query, change)
-
-			if updateErr != nil {
-				fmt.Printf("\n - Error %s - \n", updateErr)
-			}
 
 			fp, _ = gridfs.OpenId(fp.Id())
 
@@ -302,7 +273,14 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 
 //
 func Deliver() int {
-	err := errors.New("")
+	configuration, err := config.CreateConfigFromFile("example.json")
+
+	if err != nil {
+		fmt.Printf("Error %s", err)
+		return -2
+	}
+
+	fmt.Printf("%s", configuration)
 
 	serverPort := flag.Int("port", 8000, "the server port where we will serve images")
 	host := flag.String("host", "localhost", "the database host")
@@ -314,17 +292,17 @@ func Deliver() int {
 	// in order to simple configure the image server in the proxy configuration of nginx
 	// we will be getting every database variable from the request
 	serverRoute := "/{database}/{port}/{objectId}/{width}/{height}.jpg"
-
 	fallbackRoute := "/{database}/{port}/{image}"
 
 	Connection, err = mgo.Dial(*host)
-	Connection.SetMode(mgo.Eventual, true)
-	Connection.SetSyncTimeout(0)
 
 	if err != nil {
 		log.Fatal("Cannot connect to database")
 		return -1
 	}
+
+	Connection.SetMode(mgo.Eventual, true)
+	Connection.SetSyncTimeout(0)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", welcomeHandler)
