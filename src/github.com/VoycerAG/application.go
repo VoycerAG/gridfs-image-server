@@ -1,7 +1,7 @@
 package main
 
 import (
-	"VoycerAG/server"
+	"github.com/VoycerAG/server"
 	"os"
 )
 

@@ -1,2 +1,2 @@
 all:
-	go test -v VoycerAG/config
+	go test -v github.com/VoycerAG/config

@@ -1,12 +1,12 @@
 package server
 
 import (
-	"VoycerAG/config"
 	"code.google.com/p/graphics-go/graphics"
 	_ "crypto/sha256"
 	_ "encoding/base64"
 	"flag"
 	"fmt"
+	"github.com/VoycerAG/config"
 	"github.com/gorilla/mux"
 	"image"
 	_ "image/gif"
