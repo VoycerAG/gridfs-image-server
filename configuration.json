@@ -9,6 +9,26 @@
 			"name" : "stefan", 
 			"width" : 200, 
 			"height" : 300
+		},
+		{
+			"name" : "width-ratio", 
+			"width" : 200, 
+			"height" : -1
+		},
+		{
+			"name" : "s", 
+			"width" : 10, 
+			"height" : 10 
+		},
+		{
+			"name" : "m", 
+			"width" : 100, 
+			"height" : 100 
+		},
+{
+			"name" : "height-ratio", 
+			"width" : -1, 
+			"height" : 500 
 		}
 	]
 }
