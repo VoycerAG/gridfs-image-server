@@ -7,3 +7,4 @@ install:
   - go get launchpad.net/gocheck
   - go get labix.org/v2/mgo 
   - go get github.com/gorilla/mux
+  - ln -s $TRAVIS_BUILD_DIR $GOPATH/src/voycer.com
