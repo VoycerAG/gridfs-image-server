@@ -31,6 +31,8 @@ type ServerConfiguration struct {
 
 // imageHandler blub
 func imageHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Request on %s", r.URL)
+
 	requestConfig, validateError := validateParameters(r)
 
 	if validateError != nil {
@@ -40,14 +42,9 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	gridfs := Connection.DB(requestConfig.Database).GridFS("fs")
-	resizeEntry, _ := Configuration.GetEntryByName(requestConfig.FormatName)
-	foundImage, err := findImageByParentFilename(requestConfig.Filename, resizeEntry, gridfs)
 
-	if err != nil {
-		log.Fatalf(err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	resizeEntry, _ := Configuration.GetEntryByName(requestConfig.FormatName)
+	foundImage, _ := findImageByParentFilename(requestConfig.Filename, resizeEntry, gridfs)
 
 	// case that we do not want resizing and did not find any image
 	if foundImage == nil && resizeEntry == nil {
@@ -56,11 +53,10 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer foundImage.Close()
-
 	// we found a image but did not want resizing
 	if foundImage != nil {
 		io.Copy(w, foundImage)
+		foundImage.Close()
 		return
 	}
 
@@ -92,9 +88,16 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fp, _ := gridfs.Open(targetfile.Name())
-		defer fp.Close()
-		io.Copy(w, fp)
+		fp, readErr := gridfs.Open(targetfile.Name())
+
+		if fp != nil {
+			io.Copy(w, fp)
+			fp.Close()
+		} else {
+			log.Fatalf(readErr.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 }

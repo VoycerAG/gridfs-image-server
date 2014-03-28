@@ -1,34 +1,49 @@
 {
 	"allowedEntries" : [
 		{
-			"name" : "peter", 
-			"width" : 100, 
-			"height" : 200
+			"name" : "45x35", 
+			"width" : 45, 
+			"height" : 35
 		}, 
 		{
-			"name" : "stefan", 
-			"width" : 200, 
+			"name" : "294x300", 
+			"width" : 294, 
 			"height" : 300
 		},
 		{
-			"name" : "width-ratio", 
+			"name" : "294x210", 
 			"width" : 200, 
-			"height" : -1
+			"height" : 210
 		},
 		{
-			"name" : "s", 
-			"width" : 10, 
-			"height" : 10 
+			"name" : "105x95", 
+			"width" : 105, 
+			"height" : 95 
 		},
 		{
-			"name" : "m", 
-			"width" : 100, 
-			"height" : 100 
+			"name" : "50x40", 
+			"width" : 50, 
+			"height" : 40 
 		},
-{
-			"name" : "height-ratio", 
-			"width" : -1, 
-			"height" : 500 
+		{
+			"name" : "50x50", 
+			"width" : 50, 
+			"height" : 50 
+		},
+		{
+			"name" : "130x260", 
+			"width" : 130, 
+			"height" : 260 
+		},
+		{
+			"name" : "310x230", 
+			"width" : 310, 
+			"height" : 230 
+		},
+		{
+			"name" : "302x302", 
+			"width" : 302, 
+			"height" : 302 
 		}
 	]
 }
