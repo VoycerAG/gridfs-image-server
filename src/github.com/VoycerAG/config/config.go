@@ -28,9 +28,19 @@ func CreateConfigFromFile(file string) (*Config, error) {
 
 	err = json.Unmarshal(config, &result)
 
-	// todo validate configuration
+	err = result.validateConfig()
 
 	return &result, err
+}
+
+func (config *Config) validateConfig() (error) {
+	for _, element := range config.AllowedEntries {
+		if element.Width <= 0 && element.Height <=0 {
+			return fmt.Errorf("The width and height of the configuration element with name \"%s\" are invalid.", element.Name)
+		}
+	}
+
+	return nil
 }
 
 // Returns an entry the the name.

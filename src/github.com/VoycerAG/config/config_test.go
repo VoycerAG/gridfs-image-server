@@ -123,3 +123,15 @@ func (s *ConfigTestSuite) TestGetConfigEntryByName(c *C) {
 	c.Assert(err, NotNil)
 	c.Assert(notExistingElement, IsNil)
 }
+
+// TestValidateConfig tests that the config elements will be validated correctly.
+func (s *ConfigTestSuite) TestValidateConfigValid(c *C) {
+	f := testfile
+
+	c.Assert(f, FitsTypeOf, &os.File{})
+
+	configObject, _ := CreateConfigFromFile(f.Name())
+
+	err := configObject.validateConfig()
+	c.Assert(err, IsNil)
+}
