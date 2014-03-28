@@ -31,7 +31,8 @@ func CreateConfigFromFile(file string) (*Config, error) {
 	return &result, err
 }
 
-func (config *Config) GetElementByName(name string) (Entry, error) {
+// Returns an entry the the name.
+func (config *Config) GetEntryByName(name string) (Entry, error) {
 	for _, element := range config.AllowedEntries {
 		if element.Name == name {
 			return element, nil
