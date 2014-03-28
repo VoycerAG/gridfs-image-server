@@ -2,8 +2,7 @@ package server
 
 import (
 	"code.google.com/p/graphics-go/graphics"
-	_ "crypto/sha256"
-	_ "encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/VoycerAG/config"
@@ -17,265 +16,215 @@ import (
 	"labix.org/v2/mgo/bson"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 )
 
 var Connection *mgo.Session
 var Configuration *config.Config
 
-// just a static welcome handler
-func welcomeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "<html>")
-	fmt.Fprintf(w, "<h1>Image Server.</h1>")
-	fmt.Fprintf(w, "</html>")
+// wrapper object for request parameters
+type ServerConfiguration struct {
+	Database   string
+	FormatName string
+	Filename   string
 }
 
-func hasCached(etag string, md5 string, modifiedTime time.Time, updateTime time.Time) bool {
-	if updateTime.After(modifiedTime) || md5 != etag {
-		return false
-	}
-
-	return true
-}
-
-//
-func legacyHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
-	database := vars["database"]
-
-	if database == "" {
-		log.Fatal("database must not be empty")
-		return
-	}
-
-	port := vars["port"]
-
-	if port == "" {
-		port = "27017"
-	}
-
-	filename := vars["image"]
-
-	if filename == "" {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	gridfs := Connection.DB(database).GridFS("fs")
-	fp, err := gridfs.Open(filename)
-
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	} else {
-		// if the file pointer is not set, fp.Close() throws an error.. FIX this upstream?
-		defer fp.Close()
-	}
-
-	md5 := fp.MD5()
-
-	modifiedHeader := r.Header.Get("If-Modified-Since")
-	modifiedTime := time.Now()
-	cachingEnabled := r.Header.Get("Cache-Control") != "no-cache"
-
-	if modifiedHeader != "" {
-		modifiedHeader = ""
-	} else {
-		modifiedTime, _ = time.Parse(time.RFC1123, modifiedHeader)
-	}
-
-	if hasCached(md5, r.Header.Get("If-None-Match"), modifiedTime, fp.UploadDate()) && cachingEnabled {
-		w.WriteHeader(http.StatusNotModified)
-		fmt.Printf("[DEBUG][304] Returning cached image for %s\n", md5)
-		return
-	}
-
-	w.Header().Set("Etag", md5)
-	w.Header().Set("Cache-Control", "max-age=315360000")
-	d, _ := time.ParseDuration("315360000s")
-
-	expires := fp.UploadDate().Add(d)
-
-	w.Header().Set("Last-Modified", fp.UploadDate().Format(time.RFC1123))
-	w.Header().Set("Expires", expires.Format(time.RFC1123))
-	w.Header().Set("Date", fp.UploadDate().Format(time.RFC1123))
-
-	fmt.Printf("[DEBUG][200] Returning raw image for %s\n", md5)
-
-	_, err = io.Copy(w, fp)
-
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("[ERROR][500] Bad Request for %s\n", md5)
-		return
-	}
-}
-
-//
+// imageHandler blub
 func imageHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+	requestConfig, validateError := validateParameters(r)
 
-	database := vars["database"]
-
-	if database == "" {
-		log.Fatal("database must not be empty")
-		return
-	}
-
-	port := vars["port"]
-
-	if port == "" {
-		port = "27017"
-	}
-
-	objectId := vars["objectId"]
-	width := vars["width"]
-	height := vars["height"]
-
-	if objectId == "" || width == "" || height == "" {
+	if validateError != nil {
+		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	var parseError error
-	var intWidth, intHeight int64
+	gridfs := Connection.DB(requestConfig.Database).GridFS("fs")
+	entry, err := Configuration.GetEntryByName(requestConfig.FormatName)
 
-	intWidth, parseError = strconv.ParseInt(width, 10, 64)
+	if err != nil {
+		log.Printf("entry error %s", err.Error())
+	}
 
-	if parseError != nil {
-		fmt.Printf("parse error")
+	foundImage, err := findImageByParentFilename(requestConfig.Filename, entry, gridfs)
+
+	// todo remove me
+	if err != nil {
+		fmt.Printf("image found %s", err)
+	}
+
+	// case that we do not want resizing and did not find any image
+	if foundImage == nil && entry == nil {
+		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	intHeight, parseError = strconv.ParseInt(height, 10, 64)
-
-	if parseError != nil {
-		fmt.Printf("parse error")
+	// we found a image but did not want resizing
+	if foundImage != nil {
+		io.Copy(w, foundImage)
 		return
 	}
 
-	gridfs := Connection.DB(database).GridFS("fs")
+	if foundImage == nil && entry != nil {
+		// generate new image
+		foundImage, _ = findImageByParentFilename(requestConfig.Filename, nil, gridfs)
 
+		if foundImage == nil {
+			log.Printf("Could not find original image.\n", http.StatusNotFound)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		resizedImage, imageFormat, imageErr := resizeImage(foundImage, entry)
+
+		if imageErr != nil {
+			log.Fatalf(imageErr.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// return the image to the client if all cache headers could be set
+
+		targetfile, _ := gridfs.Create(generateFilename(imageFormat))
+		storeErr := storeImage(targetfile, resizedImage, imageFormat, foundImage)
+
+		if storeErr != nil {
+			log.Fatalf(imageErr.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		fp, _ := gridfs.Open(targetfile.Name())
+		io.Copy(w, fp)
+
+	}
+
+}
+
+// generateFilename generates a new filename
+func generateFilename(imageFormat string) string {
+	return fmt.Sprintf("%d.%s", time.Now().Nanosecond(), imageFormat)
+}
+
+// storeImage
+func storeImage(targetImage *mgo.GridFile, imageData *image.RGBA, imageFormat string, originalImage *mgo.GridFile) error {
+	width := imageData.Bounds().Dx()
+	height := imageData.Bounds().Dy()
+	originalRef := mgo.DBRef{"fs.files", originalImage.Id(), ""}
+
+	metadata := bson.M{
+		"width":            width,
+		"height":           height,
+		"original":         originalRef,
+		"originalFilename": originalImage.Name(),
+		"size":             fmt.Sprintf("%dx%d", width, height)}
+
+	targetImage.SetContentType(fmt.Sprintf("image/%s", imageFormat))
+	targetImage.SetMeta(metadata)
+
+	switch imageFormat {
+	case "jpeg":
+		jpeg.Encode(targetImage, imageData, &jpeg.Options{jpeg.DefaultQuality})
+	case "png":
+		png.Encode(targetImage, imageData)
+	//case "gif":
+	//gif.Encode(targetImage, imageData, &gif.Options{256})
+	default:
+		return fmt.Errorf("invalid imageFormat given")
+	}
+
+	targetImage.Close()
+
+	return nil
+}
+
+// resizeImage resizes images or crops them if either size is not defined
+func resizeImage(originalImage *mgo.GridFile, entry *config.Entry) (*image.RGBA, string, error) {
+	if entry.Width < 0 && entry.Height < 0 {
+		return nil, "", fmt.Errorf("At least one parameter of width or height must be specified")
+	}
+
+	originalImageData, imageFormat, imgErr := image.Decode(originalImage)
+
+	originalBounds := originalImageData.Bounds()
+	originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
+
+	if imgErr != nil {
+		return nil, imageFormat, imgErr
+	}
+
+	targetHeight := float64(entry.Height)
+	targetWidth := float64(entry.Width)
+
+	if targetWidth < 0 {
+		targetWidth = float64(targetHeight) * originalRatio
+	}
+
+	if targetHeight < 0 {
+		targetHeight = float64(targetWidth) * originalRatio
+	}
+
+	dst := image.NewRGBA(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
+	err := graphics.Thumbnail(dst, originalImageData)
+
+	return dst, imageFormat, err
+}
+
+// findImageByParentFilename returns either the resized image that actually exists, or the original if entry is nil
+func findImageByParentFilename(filename string, entry *config.Entry, gridfs *mgo.GridFS) (*mgo.GridFile, error) {
 	var fp *mgo.GridFile
+	var query bson.M
 
-	mongoId := bson.ObjectIdHex(objectId)
-	query := bson.M{"metadata.parentId": mongoId, "metadata.width": intWidth, "metadata.height": intHeight}
+	if entry == nil {
+		query = bson.M{"filename": filename}
+	} else {
+		query = bson.M{
+			"metadata.originalFilename": filename,
+			"metadata.width":            entry.Width,
+			"metadata.height":           entry.Height}
+	}
+
 	iter := gridfs.Find(query).Iter()
 	gridfs.OpenNext(iter, &fp)
 
 	if fp == nil {
-		// schema valid? ist 130x260 erlaubt. Wenn ja: generiere und speichere und liefer aus
-
-		// todo find via id but parentId must be null
-		fp, _ = gridfs.OpenId(mongoId)
-
-		if fp != nil {
-			fmt.Printf("parent found")
-
-			imageSrc, imageFormat, imgErr := image.Decode(fp)
-
-			if imgErr != nil {
-				fmt.Printf("Error is %s", imgErr)
-				return
-			}
-
-			dst := image.NewRGBA(image.Rect(0, 0, int(intWidth), int(intHeight)))
-			graphics.Thumbnail(dst, imageSrc)
-			targetFilename := fmt.Sprintf("%d", time.Now().Nanosecond())
-			fp, imgErr = gridfs.Create(targetFilename)
-
-			if imgErr != nil {
-				defer fp.Close()
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-
-			metadata := bson.M{
-				"parentId": mongoId,
-				"width":    int(intWidth),
-				"height":   int(intHeight),
-				"size":     fmt.Sprintf("%dx%d", intWidth, intHeight)}
-
-			fp.SetContentType(fmt.Sprintf("image/%s", imageFormat))
-
-			fp.SetMeta(metadata)
-
-			if imageFormat == "png" {
-				png.Encode(fp, dst)
-			} else if imageFormat == "jpeg" {
-				jpeg.Encode(fp, dst, &jpeg.Options{jpeg.DefaultQuality})
-			} else {
-				fmt.Printf("invalid image type %s", imageFormat)
-				return
-			}
-
-			fp.Close()
-
-			fp, _ = gridfs.OpenId(fp.Id())
-
-			if fp != nil {
-				defer fp.Close()
-			} else {
-				fmt.Printf("generated image could not be found")
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-	} else {
-		// if the file pointer is not set, fp.Close() throws an error.. FIX this upstream?
-		defer fp.Close()
+		return fp, fmt.Errorf("no image found for %s", filename)
 	}
 
-	md5 := fp.MD5()
+	return fp, nil
+}
 
-	modifiedHeader := r.Header.Get("If-Modified-Since")
-	modifiedTime := time.Now()
-	cachingEnabled := r.Header.Get("Cache-Control") != "no-cache"
+// validateParameters validate all necessary request parameters
+func validateParameters(r *http.Request) (*ServerConfiguration, error) {
+	config := ServerConfiguration{}
+	vars := mux.Vars(r)
+	database := vars["database"]
 
-	if modifiedHeader != "" {
-		modifiedHeader = ""
-	} else {
-		modifiedTime, _ = time.Parse(time.RFC1123, modifiedHeader)
+	if database == "" {
+		return nil, errors.New("database must not be empty")
 	}
 
-	if hasCached(md5, r.Header.Get("If-None-Match"), modifiedTime, fp.UploadDate()) && cachingEnabled {
-		w.WriteHeader(http.StatusNotModified)
-		fmt.Printf("[DEBUG][304] Returning cached image for %s\n", md5)
-		return
+	filename := vars["filename"]
+
+	if filename == "" {
+		return nil, errors.New("filename must not be empty")
 	}
 
-	w.Header().Set("Etag", md5)
-	w.Header().Set("Cache-Control", "max-age=315360000")
-	d, _ := time.ParseDuration("315360000s")
+	formatName := r.URL.Query().Get("format")
 
-	expires := fp.UploadDate().Add(d)
+	config.Database = database
+	config.FormatName = formatName
+	config.Filename = filename
 
-	w.Header().Set("Last-Modified", fp.UploadDate().Format(time.RFC1123))
-	w.Header().Set("Expires", expires.Format(time.RFC1123))
-	w.Header().Set("Date", fp.UploadDate().Format(time.RFC1123))
-
-	fmt.Printf("[DEBUG][200] Returning raw image for %s\n", md5)
-
-	_, err := io.Copy(w, fp)
-
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("[ERROR][500] Bad Request for %s\n", md5)
-		return
-	}
+	return &config, nil
 }
 
 //
 func Deliver() int {
 	configurationFilepath := flag.String("config", "configuration.json", "path to the configuration file")
 	serverPort := flag.Int("port", 8000, "the server port where we will serve images")
-	host := flag.String("host", "localhost", "the database host")
+	host := flag.String("host", "localhost:27017", "the database host with an optional port, localhost would suffice")
 
 	flag.Parse()
 
@@ -292,8 +241,7 @@ func Deliver() int {
 
 	// in order to simple configure the image server in the proxy configuration of nginx
 	// we will be getting every database variable from the request
-	serverRoute := "/{database}/{port}/{objectId}/{width}/{height}.jpg"
-	fallbackRoute := "/{database}/{port}/{image}"
+	serverRoute := "/{database}/{filename}"
 
 	Connection, err = mgo.Dial(*host)
 
@@ -308,7 +256,6 @@ func Deliver() int {
 	r := mux.NewRouter()
 	r.HandleFunc("/", welcomeHandler)
 	r.HandleFunc(serverRoute, imageHandler)
-	r.HandleFunc(fallbackRoute, legacyHandler)
 
 	http.Handle("/", r)
 
@@ -320,4 +267,19 @@ func Deliver() int {
 	}
 
 	return 0
+}
+
+// just a static welcome handler
+func welcomeHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "<html>")
+	fmt.Fprintf(w, "<h1>Image Server.</h1>")
+	fmt.Fprintf(w, "</html>")
+}
+
+func hasCached(etag string, md5 string, modifiedTime time.Time, updateTime time.Time) bool {
+	if updateTime.After(modifiedTime) || md5 != etag {
+		return false
+	}
+
+	return true
 }
