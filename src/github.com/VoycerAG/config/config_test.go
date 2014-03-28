@@ -97,7 +97,7 @@ func (s *ConfigTestSuite) TestCreateConfigFromFileOpenFileFailed(c *C) {
 	c.Assert(configObject.AllowedEntries, HasLen, 0)
 }
 
-// TestGetConfigElementByName tests that the config element can return a specific configuration element by its name
+// TestGetConfigElementByName tests that the config element can return a specific configuration element by its name.
 func (s *ConfigTestSuite) TestGetConfigElementByName(c *C) {
 	f := testfile
 	c.Assert(f, FitsTypeOf, &os.File{})
