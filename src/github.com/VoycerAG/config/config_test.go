@@ -107,19 +107,19 @@ func (s *ConfigTestSuite) TestGetConfigEntryByName(c *C) {
 	stefanConfigElement, err := configObject.GetEntryByName("stefan")
 
 	c.Assert(err, IsNil)
-	c.Assert(stefanConfigElement, FitsTypeOf, Entry{})
+	c.Assert(stefanConfigElement, FitsTypeOf, &Entry{})
 	c.Assert(stefanConfigElement.Width, Equals, int64(200))
 	c.Assert(stefanConfigElement.Height, Equals, int64(300))
 
 	peterConfigElement, err := configObject.GetEntryByName("peter")
 
 	c.Assert(err, IsNil)
-	c.Assert(peterConfigElement, FitsTypeOf, Entry{})
+	c.Assert(peterConfigElement, FitsTypeOf, &Entry{})
 	c.Assert(peterConfigElement.Width, Equals, int64(100))
 	c.Assert(peterConfigElement.Height, Equals, int64(200))
 
 	notExistingElement, err := configObject.GetEntryByName("notExisting")
 
 	c.Assert(err, NotNil)
-	c.Assert(notExistingElement, Equals, Entry{})
+	c.Assert(notExistingElement, IsNil)
 }

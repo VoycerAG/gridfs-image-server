@@ -2,8 +2,8 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"errors"
 )
 
 type Config struct {
@@ -28,18 +28,18 @@ func CreateConfigFromFile(file string) (*Config, error) {
 
 	err = json.Unmarshal(config, &result)
 
+	// todo validate configuration
+
 	return &result, err
 }
 
 // Returns an entry the the name.
-func (config *Config) GetEntryByName(name string) (Entry, error) {
+func (config *Config) GetEntryByName(name string) (*Entry, error) {
 	for _, element := range config.AllowedEntries {
 		if element.Name == name {
-			return element, nil
+			return &element, nil
 		}
 	}
 
-	err := errors.New("No element matched")
-
-	return Entry{}, err
+	return nil, fmt.Errorf("No Entry found in configuration for given name %s", name)
 }
