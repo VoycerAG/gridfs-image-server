@@ -19,6 +19,8 @@ import (
 	"time"
 )
 
+const JpegMaximumQuality = 100
+
 var Connection *mgo.Session
 var Configuration *config.Config
 
@@ -57,6 +59,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	if foundImage != nil {
 		io.Copy(w, foundImage)
 		foundImage.Close()
+		log.Printf("%d Image found, no resizing.\n", http.StatusOK)
 		return
 	}
 
@@ -65,16 +68,21 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 		foundImage, _ = findImageByParentFilename(requestConfig.Filename, nil, gridfs)
 
 		if foundImage == nil {
-			log.Printf("Could not find original image.\n", http.StatusNotFound)
+			log.Printf("%d Could not find original image.\n", http.StatusNotFound)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		resizedImage, imageFormat, imageErr := resizeImage(foundImage, resizeEntry)
 
+		// in this case, resizing for this image does not work, therefore, we at least return the original image
 		if imageErr != nil {
-			log.Fatalf(imageErr.Error())
-			w.WriteHeader(http.StatusBadRequest)
+
+			// this might be a problem at the moment, go does not support interlaced pngs
+			// http://code.google.com/p/go/issues/detail?id=6293
+			// at the moment, we return a not found...
+			log.Printf("%d image could not be decoded.\n", http.StatusNotFound)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
@@ -85,6 +93,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 		if storeErr != nil {
 			log.Fatalf(imageErr.Error())
 			w.WriteHeader(http.StatusBadRequest)
+			log.Printf("%d image could not be saved.\n", http.StatusBadRequest)
 			return
 		}
 
@@ -93,13 +102,13 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 		if fp != nil {
 			io.Copy(w, fp)
 			fp.Close()
+			log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
 		} else {
-			log.Fatalf(readErr.Error())
+			log.Printf(readErr.Error())
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
-
 }
 
 // generateFilename generates a new filename
@@ -125,7 +134,7 @@ func storeImage(targetImage *mgo.GridFile, imageData *image.RGBA, imageFormat st
 
 	switch imageFormat {
 	case "jpeg":
-		jpeg.Encode(targetImage, imageData, &jpeg.Options{jpeg.DefaultQuality})
+		jpeg.Encode(targetImage, imageData, &jpeg.Options{JpegMaximumQuality})
 	case "png":
 		png.Encode(targetImage, imageData)
 	//case "gif":
@@ -147,12 +156,12 @@ func resizeImage(originalImage *mgo.GridFile, entry *config.Entry) (*image.RGBA,
 
 	originalImageData, imageFormat, imgErr := image.Decode(originalImage)
 
-	originalBounds := originalImageData.Bounds()
-	originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
-
 	if imgErr != nil {
 		return nil, imageFormat, imgErr
 	}
+
+	originalBounds := originalImageData.Bounds()
+	originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
 
 	targetHeight := float64(entry.Height)
 	targetWidth := float64(entry.Width)
@@ -211,7 +220,7 @@ func validateParameters(r *http.Request) (*ServerConfiguration, error) {
 		return nil, errors.New("filename must not be empty")
 	}
 
-	formatName := r.URL.Query().Get("format")
+	formatName := r.URL.Query().Get("size")
 
 	config.Database = database
 	config.FormatName = formatName

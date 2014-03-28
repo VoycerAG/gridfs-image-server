@@ -27,8 +27,8 @@
 		},
 		{
 			"name" : "50x50", 
-			"width" : 50, 
-			"height" : 50 
+			"width" : 30, 
+			"height" : 30 
 		},
 		{
 			"name" : "130x260", 
