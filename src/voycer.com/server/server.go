@@ -6,7 +6,6 @@ import (
 	_ "encoding/base64"
 	"flag"
 	"fmt"
-	"github.com/VoycerAG/config"
 	"github.com/gorilla/mux"
 	"image"
 	_ "image/gif"
@@ -19,6 +18,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"voycer.com/config"
 )
 
 var Connection *mgo.Session
