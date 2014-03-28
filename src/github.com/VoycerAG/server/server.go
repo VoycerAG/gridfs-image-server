@@ -40,25 +40,23 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	gridfs := Connection.DB(requestConfig.Database).GridFS("fs")
-	entry, err := Configuration.GetEntryByName(requestConfig.FormatName)
+	resizeEntry, _ := Configuration.GetEntryByName(requestConfig.FormatName)
+	foundImage, err := findImageByParentFilename(requestConfig.Filename, resizeEntry, gridfs)
 
 	if err != nil {
-		log.Printf("entry error %s", err.Error())
-	}
-
-	foundImage, err := findImageByParentFilename(requestConfig.Filename, entry, gridfs)
-
-	// todo remove me
-	if err != nil {
-		fmt.Printf("image found %s", err)
+		log.Fatalf(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	// case that we do not want resizing and did not find any image
-	if foundImage == nil && entry == nil {
+	if foundImage == nil && resizeEntry == nil {
 		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+
+	defer foundImage.Close()
 
 	// we found a image but did not want resizing
 	if foundImage != nil {
@@ -66,7 +64,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if foundImage == nil && entry != nil {
+	if foundImage == nil && resizeEntry != nil {
 		// generate new image
 		foundImage, _ = findImageByParentFilename(requestConfig.Filename, nil, gridfs)
 
@@ -76,7 +74,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		resizedImage, imageFormat, imageErr := resizeImage(foundImage, entry)
+		resizedImage, imageFormat, imageErr := resizeImage(foundImage, resizeEntry)
 
 		if imageErr != nil {
 			log.Fatalf(imageErr.Error())
@@ -85,7 +83,6 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// return the image to the client if all cache headers could be set
-
 		targetfile, _ := gridfs.Create(generateFilename(imageFormat))
 		storeErr := storeImage(targetfile, resizedImage, imageFormat, foundImage)
 
@@ -96,8 +93,8 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		fp, _ := gridfs.Open(targetfile.Name())
+		defer fp.Close()
 		io.Copy(w, fp)
-
 	}
 
 }
