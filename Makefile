@@ -1,3 +1,3 @@
 all: 
-	go test ...VoycerAG/config
-	go test ...VoycerAG/server
+	go test -coverprofile fmt ...VoycerAG/config
+	go test -coverprofile fmt ...VoycerAG/server
