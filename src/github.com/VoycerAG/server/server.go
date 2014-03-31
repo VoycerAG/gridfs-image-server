@@ -20,6 +20,7 @@ import (
 )
 
 const JpegMaximumQuality = 100
+const ImageCacheDuration = 315360000
 
 var Connection *mgo.Session
 var Configuration *config.Config
@@ -29,6 +30,48 @@ type ServerConfiguration struct {
 	Database   string
 	FormatName string
 	Filename   string
+}
+
+func isModified(file *mgo.GridFile, header *http.Header) bool {
+	md5 := file.MD5()
+	modifiedHeader := header.Get("If-Modified-Since")
+	modifiedTime := time.Now()
+
+	if modifiedHeader != "" {
+		modifiedTime, _ = time.Parse(time.RFC1123, modifiedHeader)
+	}
+
+	// normalize upload date to use the same format as the browser
+	uploadDate, _ := time.Parse(time.RFC1123, file.UploadDate().Format(time.RFC1123))
+
+	if header.Get("Cache-Control") == "no-cache" {
+		log.Printf("Is modified, because caching not enabled.")
+		return true
+	}
+
+	if uploadDate.After(modifiedTime) {
+		log.Printf("Is modified, because upload date after modified date.\n")
+		return true
+	}
+
+	if md5 != header.Get("If-None-Match") {
+		log.Printf("Is modified, because md5 mismatch. %s != %s", md5, header.Get("If-None-Match"))
+		return true
+	}
+
+	return false
+}
+
+func setCacheHeaders(file *mgo.GridFile, w http.ResponseWriter) {
+	w.Header().Set("Etag", file.MD5())
+	w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", ImageCacheDuration))
+	d, _ := time.ParseDuration(fmt.Sprintf("%ds", ImageCacheDuration))
+
+	expires := file.UploadDate().Add(d)
+
+	w.Header().Set("Last-Modified", file.UploadDate().Format(time.RFC1123))
+	w.Header().Set("Expires", expires.Format(time.RFC1123))
+	w.Header().Set("Date", file.UploadDate().Format(time.RFC1123))
 }
 
 // imageHandler blub
@@ -57,6 +100,14 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 
 	// we found a image but did not want resizing
 	if foundImage != nil {
+		if !isModified(foundImage, &r.Header) {
+			w.WriteHeader(http.StatusNotModified)
+			log.Printf("%d Returning cached image.\n", http.StatusNotModified)
+			return
+		}
+
+		setCacheHeaders(foundImage, w)
+
 		io.Copy(w, foundImage)
 		foundImage.Close()
 		log.Printf("%d Image found, no resizing.\n", http.StatusOK)
@@ -100,6 +151,14 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 		fp, readErr := gridfs.Open(targetfile.Name())
 
 		if fp != nil {
+			if !isModified(fp, &r.Header) {
+				w.WriteHeader(http.StatusNotModified)
+				log.Printf("%d Returning cached image.\n", http.StatusNotModified)
+				return
+			}
+
+			setCacheHeaders(fp, w)
+
 			io.Copy(w, fp)
 			fp.Close()
 			log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
@@ -283,12 +342,4 @@ func welcomeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<html>")
 	fmt.Fprintf(w, "<h1>Image Server.</h1>")
 	fmt.Fprintf(w, "</html>")
-}
-
-func hasCached(etag string, md5 string, modifiedTime time.Time, updateTime time.Time) bool {
-	if updateTime.After(modifiedTime) || md5 != etag {
-		return false
-	}
-
-	return true
 }
