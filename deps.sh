@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o verbose
 
 go get code.google.com/p/graphics-go/graphics
 go get github.com/nfnt/resize
