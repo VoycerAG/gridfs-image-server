@@ -75,8 +75,15 @@ func setCacheHeaders(file *mgo.GridFile, w http.ResponseWriter) {
 	w.Header().Set("Date", file.UploadDate().Format(time.RFC1123))
 }
 
+type VarsHandler func(http.ResponseWriter, *http.Request, map[string]string)
+
+func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	h(w, r, vars)
+}
+
 // imageHandler blub
-func imageHandler(w http.ResponseWriter, r *http.Request) {
+func imageHandler(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 	log.Printf("Request on %s", r.URL)
 
 	requestConfig, validateError := validateParameters(r)
@@ -275,6 +282,7 @@ func findImageByParentFilename(filename string, entry *config.Entry, gridfs *mgo
 func validateParameters(r *http.Request) (*ServerConfiguration, error) {
 	config := ServerConfiguration{}
 	vars := mux.Vars(r)
+
 	database := vars["database"]
 
 	if database == "" {
@@ -331,7 +339,7 @@ func Deliver() int {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", welcomeHandler)
-	r.HandleFunc(serverRoute, imageHandler)
+	r.Handle(serverRoute, VarsHandler(imageHandler))
 
 	http.Handle("/", r)
 
