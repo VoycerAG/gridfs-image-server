@@ -32,4 +32,18 @@ func (s *ServerTestSuite) TestCreateConfigurationFromVars(c *C) {
 	c.Assert(requestConfig.FormatName, Equals, "test")
 	c.Assert(requestConfig.Database, Equals, "database")
 	c.Assert(requestConfig.Filename, Equals, "filename.jpg")
+
+	vars["filename"] = ""
+	requestConfig, err = createConfigurationFromVars(request, vars)
+
+	c.Assert(err, NotNil)
+	c.Assert(err, ErrorMatches, "filename must not be empty")
+	c.Assert(requestConfig, IsNil)
+
+	vars["database"] = ""
+	requestConfig, err = createConfigurationFromVars(request, vars)
+
+	c.Assert(err, NotNil)
+	c.Assert(err, ErrorMatches, "database must not be empty")
+	c.Assert(requestConfig, IsNil)
 }
