@@ -37,7 +37,7 @@ func (s *ServerTestSuite) TestValidateVars(c *C) {
 	vars["database"] = "database"
 	vars["filename"] = "filename.jpg"
 
-	requestConfig, err := validateParameters(request, vars)
+	requestConfig, err := validateVars(request, vars)
 
 	c.Assert(err, IsNil)
 

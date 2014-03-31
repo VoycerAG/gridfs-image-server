@@ -86,7 +86,7 @@ func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func imageHandler(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 	log.Printf("Request on %s", r.URL)
 
-	requestConfig, validateError := validateParameters(r, vars)
+	requestConfig, validateError := validateVars(r, vars)
 
 	if validateError != nil {
 		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
@@ -278,8 +278,8 @@ func findImageByParentFilename(filename string, entry *config.Entry, gridfs *mgo
 	return fp, nil
 }
 
-// validateParameters validate all necessary request parameters
-func validateParameters(r *http.Request, vars map[string]string) (*ServerConfiguration, error) {
+// validateVars validate all necessary request parameters
+func validateVars(r *http.Request, vars map[string]string) (*ServerConfiguration, error) {
 	config := ServerConfiguration{}
 
 	database := vars["database"]
