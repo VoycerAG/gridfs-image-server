@@ -3,4 +3,4 @@ go:
   - 1.2
 
 install: 
-	- ./deps.sh
+  - ./deps.sh
