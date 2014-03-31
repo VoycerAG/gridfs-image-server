@@ -22,7 +22,7 @@ type Entry struct {
 	Type   string `json:type`
 }
 
-// CreateConfigFromFile returns an Config object from a given file
+// CreateConfigFromFile returns an Config object from a given file.
 func CreateConfigFromFile(file string) (*Config, error) {
 	result := Config{}
 
@@ -39,6 +39,7 @@ func CreateConfigFromFile(file string) (*Config, error) {
 	return &result, err
 }
 
+// validateConfig validates the configuration and fills elements with default types.
 func (config *Config) validateConfig() error {
 	for index, element := range config.AllowedEntries {
 		if element.Width <= 0 && element.Height <= 0 {

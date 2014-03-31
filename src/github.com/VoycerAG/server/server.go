@@ -28,13 +28,14 @@ const ImageCacheDuration = 315360000
 var Connection *mgo.Session
 var Configuration *config.Config
 
-// wrapper object for request parameters
+// ServerConfiguration is a wrapper object for request parameters.
 type ServerConfiguration struct {
 	Database   string
 	FormatName string
 	Filename   string
 }
 
+// isModified returns true if the file must be delivered, false otherwise.
 func isModified(file *mgo.GridFile, header *http.Header) bool {
 	md5 := file.MD5()
 	modifiedHeader := header.Get("If-Modified-Since")
@@ -65,6 +66,7 @@ func isModified(file *mgo.GridFile, header *http.Header) bool {
 	return false
 }
 
+// setCacheHeaders sets the cache headers into the http.ResponseWriter
 func setCacheHeaders(file *mgo.GridFile, w http.ResponseWriter) {
 	w.Header().Set("Etag", file.MD5())
 	w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", ImageCacheDuration))
@@ -95,7 +97,7 @@ func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h(w, r, requestConfig)
 }
 
-// imageHandler blub
+// imageHandler the main handler
 func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerConfiguration) {
 	log.Printf("Request on %s", r.URL)
 
@@ -313,7 +315,7 @@ func createConfigurationFromVars(r *http.Request, vars map[string]string) (*Serv
 	return &config, nil
 }
 
-//
+//Deliver is the startup method that parses configuration files and opens the mongo connection
 func Deliver() int {
 	configurationFilepath := flag.String("config", "configuration.json", "path to the configuration file")
 	serverPort := flag.Int("port", 8000, "the server port where we will serve images")
