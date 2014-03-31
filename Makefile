@@ -1,6 +1,6 @@
 all: 
-	go test -coverprofile fmt ...VoycerAG/config
-	go test -coverprofile fmt ...VoycerAG/server
+	go test -coverprofile /dev/null ...VoycerAG/config
+	go test -coverprofile /dev/null ...VoycerAG/server
 
 coverage-server:
 	go test -coverprofile bin/coverage.out  .../VoycerAG/server
