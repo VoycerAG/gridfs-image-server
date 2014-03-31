@@ -136,8 +136,8 @@ func (s *ConfigTestSuite) TestValidateConfigValid(c *C) {
 	c.Assert(err, IsNil)
 
 	invalidEntry := Entry{
-		Name: "invalid",
-		Width: -1,
+		Name:   "invalid",
+		Width:  -1,
 		Height: -1}
 
 	configObject.AllowedEntries = append(configObject.AllowedEntries, invalidEntry)
@@ -145,4 +145,51 @@ func (s *ConfigTestSuite) TestValidateConfigValid(c *C) {
 	err = configObject.validateConfig()
 	c.Assert(err, NotNil)
 	c.Assert(err, ErrorMatches, "The width and height of the configuration element with name \"invalid\" are invalid.")
+}
+
+// TestValidateConfigInvalidType tests that an error will be returned when an invalid type was given
+func (s *ConfigTestSuite) TestValidateConfigInvalidType(c *C) {
+	f := testfile
+
+	c.Assert(f, FitsTypeOf, &os.File{})
+
+	configObject, _ := CreateConfigFromFile(f.Name())
+
+	err := configObject.validateConfig()
+	c.Assert(err, IsNil)
+
+	invalidEntry := Entry{
+		Name:   "invalid",
+		Width:  320,
+		Height: 240,
+		Type:   "none-defined"}
+
+	configObject.AllowedEntries = append(configObject.AllowedEntries, invalidEntry)
+
+	err = configObject.validateConfig()
+	c.Assert(err, NotNil)
+	c.Assert(err, ErrorMatches, "Type must be either cut or resize at element \"invalid\"")
+}
+
+// TestValidateConfigInvalidType tests that an error will be returned when an invalid type was given
+func (s *ConfigTestSuite) TestValidateConfigValidType(c *C) {
+	f := testfile
+
+	c.Assert(f, FitsTypeOf, &os.File{})
+
+	configObject, _ := CreateConfigFromFile(f.Name())
+
+	err := configObject.validateConfig()
+	c.Assert(err, IsNil)
+
+	invalidEntry := Entry{
+		Name:   "invalid",
+		Width:  320,
+		Height: 240,
+		Type:   TypeResize}
+
+	configObject.AllowedEntries = append(configObject.AllowedEntries, invalidEntry)
+
+	err = configObject.validateConfig()
+	c.Assert(err, IsNil)
 }
