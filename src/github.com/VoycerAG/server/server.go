@@ -1,12 +1,12 @@
 package server
 
 import (
-	"code.google.com/p/graphics-go/graphics"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/VoycerAG/config"
 	"github.com/gorilla/mux"
+	"github.com/nfnt/resize"
 	"image"
 	_ "image/gif"
 	"image/jpeg"
@@ -139,7 +139,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 
 		// return the image to the client if all cache headers could be set
 		targetfile, _ := gridfs.Create(generateFilename(imageFormat))
-		storeErr := storeImage(targetfile, resizedImage, imageFormat, foundImage)
+		storeErr := storeImage(targetfile, *resizedImage, imageFormat, foundImage)
 
 		if storeErr != nil {
 			log.Fatalf(imageErr.Error())
@@ -176,7 +176,7 @@ func generateFilename(imageFormat string) string {
 }
 
 // storeImage
-func storeImage(targetImage *mgo.GridFile, imageData *image.RGBA, imageFormat string, originalImage *mgo.GridFile) error {
+func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile) error {
 	width := imageData.Bounds().Dx()
 	height := imageData.Bounds().Dy()
 	originalRef := mgo.DBRef{"fs.files", originalImage.Id(), ""}
@@ -208,7 +208,7 @@ func storeImage(targetImage *mgo.GridFile, imageData *image.RGBA, imageFormat st
 }
 
 // resizeImage resizes images or crops them if either size is not defined
-func resizeImage(originalImage *mgo.GridFile, entry *config.Entry) (*image.RGBA, string, error) {
+func resizeImage(originalImage *mgo.GridFile, entry *config.Entry) (*image.Image, string, error) {
 	if entry.Width < 0 && entry.Height < 0 {
 		return nil, "", fmt.Errorf("At least one parameter of width or height must be specified")
 	}
@@ -233,10 +233,9 @@ func resizeImage(originalImage *mgo.GridFile, entry *config.Entry) (*image.RGBA,
 		targetHeight = float64(targetWidth) * originalRatio
 	}
 
-	dst := image.NewRGBA(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
-	err := graphics.Thumbnail(dst, originalImageData)
+	dst := resize.Resize(uint(targetWidth), uint(targetHeight), originalImageData, resize.Lanczos3)
 
-	return dst, imageFormat, err
+	return &dst, imageFormat, nil
 }
 
 // findImageByParentFilename returns either the resized image that actually exists, or the original if entry is nil
