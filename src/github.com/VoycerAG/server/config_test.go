@@ -1,26 +1,19 @@
-package config
+package server
 
 import (
 	"io/ioutil"
 	. "launchpad.net/gocheck"
 	"os"
 	"syscall"
-	"testing"
 )
+
+var testfile *os.File
 
 // Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
 // Bootstrap unit test suite.
-type ConfigTestSuite struct{}
-
-var testfile *os.File
-var _ = Suite(&ConfigTestSuite{})
-
-func Test(t *testing.T) {
-	TestingT(t)
-}
 
 // SetUpTest creates a test file for all tests to use.
-func (s *ConfigTestSuite) SetUpTest(c *C) {
+func (s *ServerTestSuite) SetUpTest(c *C) {
 	var err error
 
 	testfile, err = ioutil.TempFile("", "test.json")
@@ -49,12 +42,12 @@ func (s *ConfigTestSuite) SetUpTest(c *C) {
 }
 
 // TearDownTest removes the created test file.
-func (s *ConfigTestSuite) TearDownTest(c *C) {
+func (s *ServerTestSuite) TearDownTest(c *C) {
 	defer syscall.Unlink(testfile.Name())
 }
 
 // TestOpenFileErrorOnFail tests openFile to return an error.
-func (s *ConfigTestSuite) TestOpenFileErrorOnFail(c *C) {
+func (s *ServerTestSuite) TestOpenFileErrorOnFail(c *C) {
 	_, err := CreateConfigFromFile("/")
 
 	expected := "read /: is a directory"
@@ -63,7 +56,7 @@ func (s *ConfigTestSuite) TestOpenFileErrorOnFail(c *C) {
 }
 
 // TestCreateConfigFromFile tests that a config file can be created and has entries.
-func (s *ConfigTestSuite) TestCreateConfigFromFile(c *C) {
+func (s *ServerTestSuite) TestCreateConfigFromFile(c *C) {
 	f := testfile
 	c.Assert(f, FitsTypeOf, &os.File{})
 
@@ -88,7 +81,7 @@ func (s *ConfigTestSuite) TestCreateConfigFromFile(c *C) {
 }
 
 // TestCreateConfigFromFileOpenFileFailed tests that opening an invalid file will fail.
-func (s *ConfigTestSuite) TestCreateConfigFromFileOpenFileFailed(c *C) {
+func (s *ServerTestSuite) TestCreateConfigFromFileOpenFileFailed(c *C) {
 	configObject, err := CreateConfigFromFile("/")
 	c.Assert(err, NotNil)
 
@@ -99,7 +92,7 @@ func (s *ConfigTestSuite) TestCreateConfigFromFileOpenFileFailed(c *C) {
 }
 
 // TestGetConfigElementByName tests that the config element can return a specific configuration element by its name.
-func (s *ConfigTestSuite) TestGetConfigEntryByName(c *C) {
+func (s *ServerTestSuite) TestGetConfigEntryByName(c *C) {
 	f := testfile
 	c.Assert(f, FitsTypeOf, &os.File{})
 
@@ -126,7 +119,7 @@ func (s *ConfigTestSuite) TestGetConfigEntryByName(c *C) {
 }
 
 // TestValidateConfig tests that the config elements will be validated correctly.
-func (s *ConfigTestSuite) TestValidateConfigValid(c *C) {
+func (s *ServerTestSuite) TestValidateConfigValid(c *C) {
 	f := testfile
 
 	c.Assert(f, FitsTypeOf, &os.File{})
@@ -149,7 +142,7 @@ func (s *ConfigTestSuite) TestValidateConfigValid(c *C) {
 }
 
 // TestValidateConfigInvalidType tests that an error will be returned when an invalid type was given
-func (s *ConfigTestSuite) TestValidateConfigInvalidType(c *C) {
+func (s *ServerTestSuite) TestValidateConfigInvalidType(c *C) {
 	f := testfile
 
 	c.Assert(f, FitsTypeOf, &os.File{})
@@ -173,7 +166,7 @@ func (s *ConfigTestSuite) TestValidateConfigInvalidType(c *C) {
 }
 
 // TestValidateConfigInvalidType tests that an error will be returned when an invalid type was given
-func (s *ConfigTestSuite) TestValidateConfigValidType(c *C) {
+func (s *ServerTestSuite) TestValidateConfigValidType(c *C) {
 	f := testfile
 
 	c.Assert(f, FitsTypeOf, &os.File{})
@@ -196,7 +189,7 @@ func (s *ConfigTestSuite) TestValidateConfigValidType(c *C) {
 }
 
 // TestConfigurationDefaultTypeIfNoneSet test the default case for configurations
-func (s *ConfigTestSuite) TestConfigurationDefaultTypeIfNoneSet(c *C) {
+func (s *ServerTestSuite) TestConfigurationDefaultTypeIfNoneSet(c *C) {
 	f := testfile
 	c.Assert(f, FitsTypeOf, &os.File{})
 

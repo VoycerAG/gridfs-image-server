@@ -7,7 +7,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/VoycerAG/config"
 	"github.com/gorilla/mux"
 	"github.com/nfnt/resize"
 	"image"
@@ -26,7 +25,7 @@ const JpegMaximumQuality = 100
 const ImageCacheDuration = 315360000
 
 var Connection *mgo.Session
-var Configuration *config.Config
+var Configuration *Config
 
 // ServerConfiguration is a wrapper object for request parameters.
 type ServerConfiguration struct {
@@ -196,7 +195,7 @@ func generateFilename(imageFormat string) string {
 }
 
 // storeImage
-func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile, entry *config.Entry) error {
+func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile, entry *Entry) error {
 	width := imageData.Bounds().Dx()
 	height := imageData.Bounds().Dy()
 	originalRef := mgo.DBRef{"fs.files", originalImage.Id(), ""}
@@ -229,7 +228,7 @@ func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat st
 }
 
 // resizeImage resizes images or crops them if either size is not defined
-func resizeImage(originalImage *mgo.GridFile, entry *config.Entry) (*image.Image, string, error) {
+func resizeImage(originalImage *mgo.GridFile, entry *Entry) (*image.Image, string, error) {
 	if entry.Width < 0 && entry.Height < 0 {
 		return nil, "", fmt.Errorf("At least one parameter of width or height must be specified")
 	}
@@ -256,7 +255,7 @@ func resizeImage(originalImage *mgo.GridFile, entry *config.Entry) (*image.Image
 
 	var dst image.Image
 
-	if entry.Type == config.TypeResize {
+	if entry.Type == TypeResize {
 		dst = resize.Resize(uint(targetWidth), uint(targetHeight), originalImageData, resize.Lanczos3)
 	} else {
 		dst = imageRGBA.SubImage(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
@@ -266,7 +265,7 @@ func resizeImage(originalImage *mgo.GridFile, entry *config.Entry) (*image.Image
 }
 
 // findImageByParentFilename returns either the resized image that actually exists, or the original if entry is nil
-func findImageByParentFilename(filename string, entry *config.Entry, gridfs *mgo.GridFS) (*mgo.GridFile, error) {
+func findImageByParentFilename(filename string, entry *Entry, gridfs *mgo.GridFS) (*mgo.GridFile, error) {
 	var fp *mgo.GridFile
 	var query bson.M
 
@@ -325,7 +324,7 @@ func Deliver() int {
 
 	var err error
 
-	Configuration, err = config.CreateConfigFromFile(*configurationFilepath)
+	Configuration, err = CreateConfigFromFile(*configurationFilepath)
 
 	if err != nil {
 		fmt.Printf("Error %s\n", err)
