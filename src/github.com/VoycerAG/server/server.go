@@ -75,24 +75,27 @@ func setCacheHeaders(file *mgo.GridFile, w http.ResponseWriter) {
 	w.Header().Set("Date", file.UploadDate().Format(time.RFC1123))
 }
 
-type VarsHandler func(http.ResponseWriter, *http.Request, map[string]string)
+type VarsHandler func(http.ResponseWriter, *http.Request, *ServerConfiguration)
 
+// ServeHTTP wraps the imageHandler function and validates request parameters
+// in order to create a ServerConfiguration object
 func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	h(w, r, vars)
-}
 
-// imageHandler blub
-func imageHandler(w http.ResponseWriter, r *http.Request, vars map[string]string) {
-	log.Printf("Request on %s", r.URL)
-
-	requestConfig, validateError := validateVars(r, vars)
+	requestConfig, validateError := createConfigurationFromVars(r, vars)
 
 	if validateError != nil {
 		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+
+	h(w, r, requestConfig)
+}
+
+// imageHandler blub
+func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerConfiguration) {
+	log.Printf("Request on %s", r.URL)
 
 	gridfs := Connection.DB(requestConfig.Database).GridFS("fs")
 
@@ -278,8 +281,8 @@ func findImageByParentFilename(filename string, entry *config.Entry, gridfs *mgo
 	return fp, nil
 }
 
-// validateVars validate all necessary request parameters
-func validateVars(r *http.Request, vars map[string]string) (*ServerConfiguration, error) {
+// createConfigurationFromVars validate all necessary request parameters
+func createConfigurationFromVars(r *http.Request, vars map[string]string) (*ServerConfiguration, error) {
 	config := ServerConfiguration{}
 
 	database := vars["database"]

@@ -6,9 +6,6 @@ import (
 	"net/http"
 	_ "syscall"
 	"testing"
-//	"github.com/gorilla/mux"
-//	"github.com/gorilla/context"
-//	"fmt"
 )
 
 // Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
@@ -21,15 +18,14 @@ func Test(t *testing.T) {
 	TestingT(t)
 }
 
-func (s *ServerTestSuite) TestValidateVars(c *C) {
-
+func (s *ServerTestSuite) TestCreateConfigurationFromVars(c *C) {
 	request, _ := http.NewRequest("GET", "http://example.com/database/filename.jpg?size=test", nil)
 
 	vars := make(map[string]string)
 	vars["database"] = "database"
 	vars["filename"] = "filename.jpg"
 
-	requestConfig, err := validateVars(request, vars)
+	requestConfig, err := createConfigurationFromVars(request, vars)
 
 	c.Assert(err, IsNil)
 
