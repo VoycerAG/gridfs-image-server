@@ -2,6 +2,8 @@ package server
 
 import (
 	"code.google.com/p/graphics-go/graphics"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -183,7 +185,12 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 
 // generateFilename generates a new filename
 func generateFilename(imageFormat string) string {
-	return fmt.Sprintf("%d.%s", time.Now().Nanosecond(), imageFormat)
+	hash := sha256.New()
+	hash.Write([]byte(fmt.Sprintf("%s", time.Now().Nanosecond())))
+	md := hash.Sum(nil)
+	mdStr := hex.EncodeToString(md)
+
+	return fmt.Sprintf("%s.%s", mdStr, imageFormat)
 }
 
 // storeImage
