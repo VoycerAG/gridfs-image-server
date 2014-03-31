@@ -32,8 +32,7 @@ func (s *ConfigTestSuite) SetUpTest(c *C) {
 		{
 			"name" : "peter",
 			"width" : 100,
-			"height" : 200,
-			"type" : "resize"
+			"height" : 200
 		}, 
 		{
 			"name" : "stefan",
@@ -194,4 +193,18 @@ func (s *ConfigTestSuite) TestValidateConfigValidType(c *C) {
 
 	err = configObject.validateConfig()
 	c.Assert(err, IsNil)
+}
+
+// TestConfigurationDefaultTypeIfNoneSet test the default case for configurations
+func (s *ConfigTestSuite) TestConfigurationDefaultTypeIfNoneSet(c *C) {
+	f := testfile
+	c.Assert(f, FitsTypeOf, &os.File{})
+
+	configObject, _ := CreateConfigFromFile(f.Name())
+
+	err := configObject.validateConfig()
+
+	c.Assert(err, IsNil)
+	c.Assert(configObject.AllowedEntries, HasLen, 2)
+	c.Assert(configObject.AllowedEntries[0].Type, Equals, TypeResize)
 }

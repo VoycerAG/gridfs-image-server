@@ -40,13 +40,14 @@ func CreateConfigFromFile(file string) (*Config, error) {
 }
 
 func (config *Config) validateConfig() error {
-	for _, element := range config.AllowedEntries {
+	for index, element := range config.AllowedEntries {
 		if element.Width <= 0 && element.Height <= 0 {
 			return fmt.Errorf("The width and height of the configuration element with name \"%s\" are invalid.", element.Name)
 		}
 
 		if element.Type == "" {
-			element.Type = TypeResize
+			config.AllowedEntries[index].Type = TypeResize
+			continue
 		}
 
 		if element.Type != TypeResize && element.Type != TypeCut {
