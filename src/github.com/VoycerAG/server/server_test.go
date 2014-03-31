@@ -11,10 +11,6 @@ import (
 //	"fmt"
 )
 
-type key int
-
-const VarsKey key = iota
-
 // Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
 // Bootstrap unit test suite.
 type ServerTestSuite struct{}
@@ -23,10 +19,6 @@ var _ = Suite(&ServerTestSuite{})
 
 func Test(t *testing.T) {
 	TestingT(t)
-}
-
-type MyHttpRequest interface {
-	SomeMethod(x int64, y string)
 }
 
 func (s *ServerTestSuite) TestValidateVars(c *C) {
