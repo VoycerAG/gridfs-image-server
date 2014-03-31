@@ -140,7 +140,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 
 		// return the image to the client if all cache headers could be set
 		targetfile, _ := gridfs.Create(generateFilename(imageFormat))
-		storeErr := storeImage(targetfile, *resizedImage, imageFormat, foundImage)
+		storeErr := storeImage(targetfile, *resizedImage, imageFormat, foundImage, resizeEntry)
 
 		if storeErr != nil {
 			log.Fatalf(imageErr.Error())
@@ -177,7 +177,7 @@ func generateFilename(imageFormat string) string {
 }
 
 // storeImage
-func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile) error {
+func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile, entry *config.Entry) error {
 	width := imageData.Bounds().Dx()
 	height := imageData.Bounds().Dy()
 	originalRef := mgo.DBRef{"fs.files", originalImage.Id(), ""}
@@ -187,6 +187,7 @@ func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat st
 		"height":           height,
 		"original":         originalRef,
 		"originalFilename": originalImage.Name(),
+		"resizeType":       entry.Type,
 		"size":             fmt.Sprintf("%dx%d", width, height)}
 
 	targetImage.SetContentType(fmt.Sprintf("image/%s", imageFormat))
@@ -256,6 +257,7 @@ func findImageByParentFilename(filename string, entry *config.Entry, gridfs *mgo
 		query = bson.M{
 			"metadata.originalFilename": filename,
 			"metadata.width":            entry.Width,
+			"metadata.resizeType":       entry.Type,
 			"metadata.height":           entry.Height}
 	}
 

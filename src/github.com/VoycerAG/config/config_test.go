@@ -32,12 +32,14 @@ func (s *ConfigTestSuite) SetUpTest(c *C) {
 		{
 			"name" : "peter",
 			"width" : 100,
-			"height" : 200
+			"height" : 200,
+			"type" : "resize"
 		}, 
 		{
 			"name" : "stefan",
 			"width" : 200,
-			"height" : 300
+			"height" : 300,
+			"type" : "cut"
 		}
 	]
 }`
