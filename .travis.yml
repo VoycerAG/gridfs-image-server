@@ -3,9 +3,4 @@ go:
   - 1.2
 
 install: 
-  - go get github.com/nfnt/resize
-  - go get code.google.com/p/graphics-go/graphics
-  - go get launchpad.net/gocheck
-  - go get labix.org/v2/mgo 
-  - go get github.com/VoycerAG/server
-  - go get github.com/VoycerAG/config
+	- ./deps.sh
