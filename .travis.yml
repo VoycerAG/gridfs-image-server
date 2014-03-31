@@ -3,5 +3,4 @@ go:
   - 1.2
 
 install:
-  - export GOPATH=$HOME/gopath/src/github.com/VoycerAG/gridfs-image-server:$GOPATH 
   - ./deps.sh
