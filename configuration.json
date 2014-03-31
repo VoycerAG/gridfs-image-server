@@ -48,7 +48,15 @@
 		{
 			"name" : "landscape", 
 			"width" : 800, 
-			"height" : 50 
+			"height" : 50, 
+		  "type":"resize" 
+		},
+		{
+			"name" : "landscape2", 
+			"width" : 800, 
+			"height" : 50, 
+		  "type":"cut" 
 		}
+
 	]
 }
