@@ -1,6 +1,7 @@
 package server
 
 import (
+	"code.google.com/p/graphics-go/graphics"
 	"errors"
 	"flag"
 	"fmt"
@@ -219,23 +220,29 @@ func resizeImage(originalImage *mgo.GridFile, entry *config.Entry) (*image.Image
 		return nil, imageFormat, imgErr
 	}
 
-	originalBounds := originalImageData.Bounds()
-	originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
-
 	targetHeight := float64(entry.Height)
 	targetWidth := float64(entry.Width)
 
 	if targetWidth < 0 {
-		targetWidth = float64(targetHeight) * originalRatio
+		targetWidth = 0
 	}
 
 	if targetHeight < 0 {
-		targetHeight = float64(targetWidth) * originalRatio
+		targetHeight = 0
 	}
 
-	dst := resize.Resize(uint(targetWidth), uint(targetHeight), originalImageData, resize.Lanczos3)
+	imageRGBA := image.NewRGBA(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
+	err := graphics.Thumbnail(imageRGBA, originalImageData)
 
-	return &dst, imageFormat, nil
+	var dst image.Image
+
+	if entry.Type == config.TypeResize {
+		dst = resize.Resize(uint(targetWidth), uint(targetHeight), originalImageData, resize.Lanczos3)
+	} else {
+		dst = imageRGBA.SubImage(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
+	}
+
+	return &dst, imageFormat, err
 }
 
 // findImageByParentFilename returns either the resized image that actually exists, or the original if entry is nil

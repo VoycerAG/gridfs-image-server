@@ -37,13 +37,18 @@
 		},
 		{
 			"name" : "310x230", 
-			"width" : 310, 
+			"width" : -1, 
 			"height" : 230 
 		},
 		{
 			"name" : "302x302", 
 			"width" : 302, 
-			"height" : 302 
+			"height" : -1 
+		},
+		{
+			"name" : "landscape", 
+			"width" : 800, 
+			"height" : 50 
 		}
 	]
 }
