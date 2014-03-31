@@ -242,7 +242,7 @@ func Deliver() int {
 	Configuration, err = config.CreateConfigFromFile(*configurationFilepath)
 
 	if err != nil {
-		fmt.Printf("Error %s", err)
+		fmt.Printf("Error %s\n", err)
 		return -2
 	}
 
