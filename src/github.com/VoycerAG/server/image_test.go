@@ -158,6 +158,20 @@ func (s *ImageTestSuite) TestValidEntryTypeCutAndBothGiven(c *C) {
 }
 
 // TestEncodeJpegImage
+func (s *ImageTestSuite) TestEncodeFunnyImageFormat(c *C) {
+	c.Assert(testMongoJpeg, Not(IsNil))
+
+	imageStream, _, imgErr := image.Decode(testJpeg)
+
+	c.Assert(imgErr, IsNil)
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
+
+	encodeErr := EncodeImage(testMongoJpeg, imageStream, "funny")
+	c.Assert(encodeErr, ErrorMatches, "invalid imageFormat given")
+}
+
+// TestEncodeJpegImage
 func (s *ImageTestSuite) TestEncodeJpegImage(c *C) {
 	c.Assert(testMongoJpeg, Not(IsNil))
 
