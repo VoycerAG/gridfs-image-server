@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"image"
 	"image/jpeg"
 	"labix.org/v2/mgo"
@@ -94,4 +95,43 @@ func (s *ServerTestSuite) TestCacheHitSuccess(c *C) {
 	header.Set("If-Modified-Since", modified)
 
 	c.Assert(isModified(testMongoFile, &header), Equals, false)
+}
+
+type TestResponseWriter struct {
+	HeaderData http.Header
+	HeaderCode int
+}
+
+func (t *TestResponseWriter) Header() http.Header {
+	return t.HeaderData
+}
+
+func (t *TestResponseWriter) Write(b []byte) (int, error) {
+	return -1, fmt.Errorf("not implemented")
+}
+
+func (t *TestResponseWriter) WriteHeader(code int) {
+	t.HeaderCode = code
+}
+
+// TestSetCacheHeaders uses a mocked response writer in order to get header values from method
+func (s *ServerTestSuite) TestSetCacheHeaders(c *C) {
+	header := http.Header{}
+	responseWriter := TestResponseWriter{header, -1}
+
+	d, _ := time.ParseDuration(fmt.Sprintf("%ds", ImageCacheDuration))
+
+	expires := testMongoFile.UploadDate().Add(d)
+
+	setCacheHeaders(testMongoFile, &responseWriter)
+
+	expectedLastModified := testMongoFile.UploadDate().Format(time.RFC1123)
+	expectedExpiryDate := expires.Format(time.RFC1123)
+	expectedDate := expectedLastModified
+
+	c.Assert(testMongoFile.MD5(), Equals, header.Get("Etag"))
+	c.Assert(fmt.Sprintf("max-age=%d", ImageCacheDuration), Equals, header.Get("Cache-Control"))
+	c.Assert(expectedLastModified, Equals, header.Get("Last-Modified"))
+	c.Assert(expectedExpiryDate, Equals, header.Get("Expires"))
+	c.Assert(expectedDate, Equals, header.Get("Date"))
 }
