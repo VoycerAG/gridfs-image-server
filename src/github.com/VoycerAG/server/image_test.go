@@ -28,6 +28,7 @@ func (s *ImageTestSuite) TearDownTest(c *C) {
 
 }
 
+// TestResizeImageInvalidEntryGiven
 func (s *ImageTestSuite) TestResizeImageInvalidEntryGiven(c *C) {
 	entry := Entry{"test", -1, -1, ""}
 
@@ -38,16 +39,56 @@ func (s *ImageTestSuite) TestResizeImageInvalidEntryGiven(c *C) {
 	c.Assert(imageError, ErrorMatches, "At least one parameter of width or height must be specified")
 }
 
+// TestValidEntryTypeResizeAndFormatForwarding
 func (s *ImageTestSuite) TestValidEntryTypeResizeAndFormatForwarding(c *C) {
-	entry := Entry{"test", 400, 300, TypeResize}
+	entry := Entry{"test", 350, 400, TypeResize}
 
 	imageStream, _, imgErr := image.Decode(testJpeg)
+
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
 	c.Assert(imgErr, IsNil)
 
 	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
 
-	//c.Assert(imageData, IsNil)
 	c.Assert(imageFormat, Equals, "i do not care")
 	c.Assert(imageError, IsNil)
-	c.Assert(imageData.Bounds().Dx(), Equals, 400)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 350)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 400)
+}
+
+// TestValidEntryTypeCutAndNonHeightGiven
+func (s *ImageTestSuite) TestValidEntryTypeCutAndNonHeightGiven(c *C) {
+	entry := Entry{"test", 400, -1, TypeCut}
+
+	imageStream, _, imgErr := image.Decode(testJpeg)
+
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
+	c.Assert(imgErr, IsNil)
+
+	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 400)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 300)
+}
+
+// TestValidEntryTypeCutAndNonHeightGiven
+func (s *ImageTestSuite) TestValidEntryTypeCutAndNonWidthGiven(c *C) {
+	entry := Entry{"test", -1, 300, TypeCut}
+
+	imageStream, _, imgErr := image.Decode(testJpeg)
+
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
+	c.Assert(imgErr, IsNil)
+
+	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 400)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 300)
 }

@@ -29,22 +29,35 @@ func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry
 	targetHeight := float64(entry.Height)
 	targetWidth := float64(entry.Width)
 
-	if targetWidth < 0 {
-		targetWidth = 0
-	}
-
-	if targetHeight < 0 {
-		targetHeight = 0
-	}
-
-	imageRGBA := image.NewRGBA(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
-	err := graphics.Thumbnail(imageRGBA, originalImageData)
-
 	var dst image.Image
+	var err error
 
 	if entry.Type == TypeResize {
+		// the Resize method automatically adjusts ratio based format when one parameter is zero
+		if targetWidth < 0 {
+			targetWidth = 0
+		}
+
+		if targetHeight < 0 {
+			targetHeight = 0
+		}
+
 		dst = resize.Resize(uint(targetWidth), uint(targetHeight), originalImageData, resize.Lanczos3)
 	} else {
+		// the Thumbnail method needs correctly adjusted bounds in order to work
+		originalBounds := originalImageData.Bounds()
+		originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
+
+		if targetWidth < 0 {
+			targetWidth = float64(targetHeight) * originalRatio
+		}
+
+		if targetHeight < 0 {
+			targetHeight = float64(targetWidth) / originalRatio
+		}
+
+		imageRGBA := image.NewRGBA(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
+		err = graphics.Thumbnail(imageRGBA, originalImageData)
 		dst = imageRGBA.SubImage(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
 	}
 
