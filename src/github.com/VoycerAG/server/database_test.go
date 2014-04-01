@@ -46,4 +46,10 @@ func (s *DatabaseTestSuite) TestFindImageByParentFilename(c *C) {
 
 	c.Assert(file, NotNil)
 	c.Assert(err, IsNil)
+
+	file, err = FindImageByParentFilename("imagenotexisting.jpg", nil, gridfs)
+
+	c.Assert(file, IsNil)
+	c.Assert(err, NotNil)
+	c.Assert(err, ErrorMatches, "no image found for imagenotexisting.jpg")
 }
