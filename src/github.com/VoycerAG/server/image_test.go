@@ -57,6 +57,42 @@ func (s *ImageTestSuite) TestValidEntryTypeResizeAndFormatForwarding(c *C) {
 	c.Assert((*imageData).Bounds().Dy(), Equals, 400)
 }
 
+// TestValidEntryTypeResizeAndFormatForwardingHeightMissing
+func (s *ImageTestSuite) TestValidEntryTypeResizeAndFormatForwardingHeightMissing(c *C) {
+	entry := Entry{"test", 350, -1, TypeResize}
+
+	imageStream, _, imgErr := image.Decode(testJpeg)
+
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
+	c.Assert(imgErr, IsNil)
+
+	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 350)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 263)
+}
+
+// TestValidEntryTypeResizeAndFormatForwardingWidthMissing
+func (s *ImageTestSuite) TestValidEntryTypeResizeAndFormatForwardingWidthMissing(c *C) {
+	entry := Entry{"test", -1, 400, TypeResize}
+
+	imageStream, _, imgErr := image.Decode(testJpeg)
+
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
+	c.Assert(imgErr, IsNil)
+
+	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 534)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 400)
+}
+
 // TestValidEntryTypeCutAndNonHeightGiven
 func (s *ImageTestSuite) TestValidEntryTypeCutAndNonHeightGiven(c *C) {
 	entry := Entry{"test", 400, -1, TypeCut}
@@ -75,7 +111,7 @@ func (s *ImageTestSuite) TestValidEntryTypeCutAndNonHeightGiven(c *C) {
 	c.Assert((*imageData).Bounds().Dy(), Equals, 300)
 }
 
-// TestValidEntryTypeCutAndNonHeightGiven
+// TestValidEntryTypeCutAndNonWidthGiven
 func (s *ImageTestSuite) TestValidEntryTypeCutAndNonWidthGiven(c *C) {
 	entry := Entry{"test", -1, 300, TypeCut}
 
@@ -91,4 +127,22 @@ func (s *ImageTestSuite) TestValidEntryTypeCutAndNonWidthGiven(c *C) {
 	c.Assert(imageError, IsNil)
 	c.Assert((*imageData).Bounds().Dx(), Equals, 400)
 	c.Assert((*imageData).Bounds().Dy(), Equals, 300)
+}
+
+// TestValidEntryTypeCutAndBothGiven
+func (s *ImageTestSuite) TestValidEntryTypeCutAndBothGiven(c *C) {
+	entry := Entry{"test", 800, 600, TypeCut}
+
+	imageStream, _, imgErr := image.Decode(testJpeg)
+
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
+	c.Assert(imgErr, IsNil)
+
+	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 800)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 600)
 }

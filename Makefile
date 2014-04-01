@@ -1,7 +1,7 @@
 all: 
 	go test -coverprofile /dev/null ...VoycerAG/server
 
-coverager:
+coverage:
 	go test -coverprofile bin/coverage.out  .../VoycerAG/server
 	go tool cover -html=bin/coverage.out
 
