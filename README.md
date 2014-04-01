@@ -10,7 +10,7 @@ Compilation:
 
 * In the projects root directory export GOPATH=\`pwd\`
 * run ./deps.sh to install depedencies
-* go install voycer.com will install the binary in bin/voycer.com
+* go install github.com/VoycerAG will install the binary in bin/VoycerAG
 
 Instructions
 -----
