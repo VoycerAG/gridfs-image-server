@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/nfnt/resize"
 	"image"
-	_ "image/gif"
+	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"labix.org/v2/mgo"
@@ -13,7 +13,6 @@ import (
 
 // ResizeImageFromGridfs resizes an gridfs image stream
 func ResizeImageFromGridfs(originalImage *mgo.GridFile, entry *Entry) (*image.Image, string, error) {
-
 	originalImageData, imageFormat, imgErr := image.Decode(originalImage)
 
 	if imgErr != nil {
@@ -75,7 +74,7 @@ func EncodeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat s
 	case "png":
 		png.Encode(targetImage, imageData)
 	case "gif":
-
+		gif.Encode(targetImage, imageData, &gif.Options{256, nil, nil})
 	default:
 		return fmt.Errorf("invalid imageFormat given")
 	}

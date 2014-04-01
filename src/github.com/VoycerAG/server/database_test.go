@@ -1,13 +1,12 @@
 package server
 
-
 import (
-	. "launchpad.net/gocheck"
 	"labix.org/v2/mgo"
-//	"labix.org/v2/mgo/bson"
-//	"image"
-	"os"
+	. "launchpad.net/gocheck"
+	//	"labix.org/v2/mgo/bson"
+	//	"image"
 	"io"
+	"os"
 )
 
 // Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
