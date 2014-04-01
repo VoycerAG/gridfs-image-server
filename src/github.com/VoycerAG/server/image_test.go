@@ -8,8 +8,6 @@ import (
 	"os"
 )
 
-// Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
-// Bootstrap unit test suite.
 type ImageTestSuite struct{}
 
 var testJpeg *os.File

@@ -1,16 +1,13 @@
 package server
 
 import (
-	"labix.org/v2/mgo"
-	. "launchpad.net/gocheck"
-		"labix.org/v2/mgo/bson"
 	"io"
+	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
+	. "launchpad.net/gocheck"
 	"os"
-//	"fmt"
 )
 
-// Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
-// Bootstrap unit test suite.
 type DatabaseTestSuite struct{}
 
 var _ = Suite(&DatabaseTestSuite{})
@@ -46,7 +43,6 @@ func (s *DatabaseTestSuite) SetUpTest(c *C) {
 
 	childFile.Close()
 
-
 }
 
 // TearDownTest removes the created test file.
@@ -73,9 +69,9 @@ func (s *DatabaseTestSuite) TestFindImageByParentFilename(c *C) {
 	c.Assert(err, ErrorMatches, "no image found for imagenotexisting.jpg")
 
 	entry := Entry{
-		Width: 100,
+		Width:  100,
 		Height: 200,
-		Type: "crop"}
+		Type:   "crop"}
 
 	file, err = FindImageByParentFilename("original.jpg", &entry, gridfs)
 

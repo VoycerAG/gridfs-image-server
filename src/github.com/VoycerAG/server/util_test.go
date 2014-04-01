@@ -4,8 +4,6 @@ import (
 	. "launchpad.net/gocheck"
 )
 
-// Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
-// Bootstrap unit test suite.
 type UtilTestSuite struct{}
 
 var _ = Suite(&UtilTestSuite{})

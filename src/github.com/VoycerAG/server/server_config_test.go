@@ -8,15 +8,15 @@ import (
 
 // Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
 // Bootstrap unit test suite.
-type ServerTestSuite struct{}
+type ServerConfigTestSuite struct{}
 
-var _ = Suite(&ServerTestSuite{})
+var _ = Suite(&ServerConfigTestSuite{})
 
 func Test(t *testing.T) {
 	TestingT(t)
 }
 
-func (s *ServerTestSuite) TestCreateConfigurationFromVars(c *C) {
+func (s *ServerConfigTestSuite) TestCreateConfigurationFromVars(c *C) {
 	request, _ := http.NewRequest("GET", "http://example.com/database/filename.jpg?size=test", nil)
 
 	vars := make(map[string]string)
