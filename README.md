@@ -16,10 +16,10 @@ Instructions
 -----
 start the server with:
 
- Usage of ./bin/VoycerAG:
-  -config="configuration.json": path to the configuration file
-  -host="localhost:27017": the database host with an optional port, localhost would suffice
-  -port=8000: the server port where we will serve images
+    Usage of ./bin/VoycerAG:
+      -config="configuration.json": path to the configuration file
+      -host="localhost:27017": the database host with an optional port, localhost would suffice
+      -port=8000: the server port where we will serve images
 
 or use an init script. 
 
