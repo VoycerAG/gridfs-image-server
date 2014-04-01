@@ -41,6 +41,39 @@ func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h(w, r, requestConfig)
 }
 
+// storeImage saves the image
+func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile, entry *Entry) error {
+	width := imageData.Bounds().Dx()
+	height := imageData.Bounds().Dy()
+	originalRef := mgo.DBRef{"fs.files", originalImage.Id(), ""}
+
+	metadata := bson.M{
+		"width":            width,
+		"height":           height,
+		"original":         originalRef,
+		"originalFilename": originalImage.Name(),
+		"resizeType":       entry.Type,
+		"size":             fmt.Sprintf("%dx%d", width, height)}
+
+	targetImage.SetContentType(fmt.Sprintf("image/%s", imageFormat))
+	targetImage.SetMeta(metadata)
+
+	switch imageFormat {
+	case "jpeg":
+		jpeg.Encode(targetImage, imageData, &jpeg.Options{JpegMaximumQuality})
+	case "png":
+		png.Encode(targetImage, imageData)
+	case "gif":
+
+	default:
+		return fmt.Errorf("invalid imageFormat given")
+	}
+
+	targetImage.Close()
+
+	return nil
+}
+
 // isModified returns true if the file must be delivered, false otherwise.
 func isModified(file *mgo.GridFile, header *http.Header) bool {
 	md5 := file.MD5()
@@ -127,7 +160,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 			return
 		}
 
-		resizedImage, imageFormat, imageErr := ResizeImage(foundImage, resizeEntry)
+		resizedImage, imageFormat, imageErr := ResizeImageFromGridfs(foundImage, resizeEntry)
 
 		// in this case, resizing for this image does not work, therefore, we at least return the original image
 		if imageErr != nil {
@@ -171,39 +204,6 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 			return
 		}
 	}
-}
-
-// storeImage
-func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile, entry *Entry) error {
-	width := imageData.Bounds().Dx()
-	height := imageData.Bounds().Dy()
-	originalRef := mgo.DBRef{"fs.files", originalImage.Id(), ""}
-
-	metadata := bson.M{
-		"width":            width,
-		"height":           height,
-		"original":         originalRef,
-		"originalFilename": originalImage.Name(),
-		"resizeType":       entry.Type,
-		"size":             fmt.Sprintf("%dx%d", width, height)}
-
-	targetImage.SetContentType(fmt.Sprintf("image/%s", imageFormat))
-	targetImage.SetMeta(metadata)
-
-	switch imageFormat {
-	case "jpeg":
-		jpeg.Encode(targetImage, imageData, &jpeg.Options{JpegMaximumQuality})
-	case "png":
-		png.Encode(targetImage, imageData)
-	//case "gif":
-	//gif.Encode(targetImage, imageData, &gif.Options{256})
-	default:
-		return fmt.Errorf("invalid imageFormat given")
-	}
-
-	targetImage.Close()
-
-	return nil
 }
 
 //Deliver is the startup method that parses configuration files and opens the mongo connection

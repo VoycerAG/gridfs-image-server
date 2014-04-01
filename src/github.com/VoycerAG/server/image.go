@@ -8,16 +8,22 @@ import (
 	"labix.org/v2/mgo"
 )
 
-// ResizeImage resizes images or crops them if either size is not defined
-func ResizeImage(originalImage *mgo.GridFile, entry *Entry) (*image.Image, string, error) {
-	if entry.Width < 0 && entry.Height < 0 {
-		return nil, "", fmt.Errorf("At least one parameter of width or height must be specified")
-	}
+// ResizeImageFromGridfs resizes an gridfs image stream
+func ResizeImageFromGridfs(originalImage *mgo.GridFile, entry *Entry) (*image.Image, string, error) {
 
 	originalImageData, imageFormat, imgErr := image.Decode(originalImage)
 
 	if imgErr != nil {
 		return nil, imageFormat, imgErr
+	}
+
+	return ResizeImage(originalImageData, imageFormat, entry)
+}
+
+// ResizeImage resizes images or crops them if either size is not defined
+func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry) (*image.Image, string, error) {
+	if entry.Width < 0 && entry.Height < 0 {
+		return nil, "", fmt.Errorf("At least one parameter of width or height must be specified")
 	}
 
 	targetHeight := float64(entry.Height)

@@ -1,10 +1,8 @@
 package server
 
 import (
-	_ "io/ioutil"
 	. "launchpad.net/gocheck"
 	"net/http"
-	_ "syscall"
 	"testing"
 )
 
