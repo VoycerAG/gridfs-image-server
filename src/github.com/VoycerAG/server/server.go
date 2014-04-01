@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"image"
-	_ "image/gif"
-	"image/jpeg"
-	"image/png"
 	"io"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
@@ -39,23 +36,6 @@ func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h(w, r, requestConfig)
-}
-
-// encodeImage encodes the image with the given format
-func encodeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string) error {
-
-	switch imageFormat {
-	case "jpeg":
-		jpeg.Encode(targetImage, imageData, &jpeg.Options{JpegMaximumQuality})
-	case "png":
-		png.Encode(targetImage, imageData)
-	case "gif":
-
-	default:
-		return fmt.Errorf("invalid imageFormat given")
-	}
-
-	return nil
 }
 
 // storeImage saves the image
@@ -181,7 +161,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 
 		// return the image to the client if all cache headers could be set
 		targetfile, _ := gridfs.Create(GetRandomFilename(imageFormat))
-		encodeErr := encodeImage(targetfile, *resizedImage, imageFormat)
+		encodeErr := EncodeImage(targetfile, *resizedImage, imageFormat)
 
 		if encodeErr != nil {
 			log.Fatalf(imageErr.Error())

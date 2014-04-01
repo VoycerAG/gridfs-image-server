@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"github.com/nfnt/resize"
 	"image"
+	_ "image/gif"
+	"image/jpeg"
+	"image/png"
 	"labix.org/v2/mgo"
 )
 
@@ -62,4 +65,20 @@ func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry
 	}
 
 	return &dst, imageFormat, err
+}
+
+// EncodeImage encodes the image with the given format
+func EncodeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string) error {
+	switch imageFormat {
+	case "jpeg":
+		jpeg.Encode(targetImage, imageData, &jpeg.Options{JpegMaximumQuality})
+	case "png":
+		png.Encode(targetImage, imageData)
+	case "gif":
+
+	default:
+		return fmt.Errorf("invalid imageFormat given")
+	}
+
+	return nil
 }
