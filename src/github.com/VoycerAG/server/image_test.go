@@ -2,6 +2,7 @@ package server
 
 import (
 	"image"
+	"io"
 	"labix.org/v2/mgo"
 	. "launchpad.net/gocheck"
 	"os"
@@ -307,4 +308,57 @@ func (s *ImageTestSuite) TestEncodeGifImageAnimated(c *C) {
 	encodeErr := EncodeImage(testMongoGif, imageStream, imageType)
 	c.Assert(encodeErr, IsNil)
 	c.Assert(testMongoGif.Size() > 0, Equals, true)
+}
+
+// TestResizeImageFromGridFsEncodingError
+func (s *ImageTestSuite) TestResizeImageFromGridFsEncodingError(c *C) {
+	filename, _ := os.Getwd()
+	testPNG, err := os.Open(filename + "/../testdata/interlaced.png")
+	c.Assert(err, IsNil)
+	TestConnection, err = mgo.Dial("localhost")
+	c.Assert(err, IsNil)
+	TestConnection.SetMode(mgo.Monotonic, true)
+
+	testMongoPNG, mongoErr := TestConnection.DB("unittest").GridFS("fs").Create("interlaced.png")
+	c.Assert(mongoErr, IsNil)
+	c.Assert(testMongoPNG, Not(IsNil))
+
+	io.Copy(testMongoPNG, testPNG)
+	testMongoPNG.Close()
+
+	entry := Entry{"test", 800, 600, TypeCut}
+
+	testMongoPNG, err = TestConnection.DB("unittest").GridFS("fs").Open("interlaced.png")
+	c.Assert(err, IsNil)
+
+	_, _, errResult := ResizeImageFromGridfs(testMongoPNG, &entry)
+	c.Assert(errResult, ErrorMatches, "png: unsupported feature: compression, filter or interlace method")
+}
+
+//TestResizeImageFromGridFs
+func (s *ImageTestSuite) TestResizeImageFromGridFs(c *C) {
+	filename, _ := os.Getwd()
+	testPNG, err := os.Open(filename + "/../testdata/normal.png")
+	c.Assert(err, IsNil)
+	TestConnection, err = mgo.Dial("localhost")
+	c.Assert(err, IsNil)
+	TestConnection.SetMode(mgo.Monotonic, true)
+
+	testMongoPNG, mongoErr := TestConnection.DB("unittest").GridFS("fs").Create("normal.png")
+	c.Assert(mongoErr, IsNil)
+	c.Assert(testMongoPNG, Not(IsNil))
+
+	io.Copy(testMongoPNG, testPNG)
+	testMongoPNG.Close()
+
+	entry := Entry{"test", 800, 600, TypeCut}
+
+	testMongoPNG, err = TestConnection.DB("unittest").GridFS("fs").Open("normal.png")
+	c.Assert(err, IsNil)
+
+	imageResult, _, errResult := ResizeImageFromGridfs(testMongoPNG, &entry)
+	c.Assert(errResult, IsNil)
+
+	c.Assert((*imageResult).Bounds().Dx(), Equals, 800)
+	c.Assert((*imageResult).Bounds().Dy(), Equals, 600)
 }
