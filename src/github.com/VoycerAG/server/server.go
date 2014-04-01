@@ -38,8 +38,8 @@ func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h(w, r, requestConfig)
 }
 
-// storeImage saves the image
-func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile, entry *Entry) error {
+// addImageMetaData adds data to the image the image
+func addImageMetaData(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile, entry *Entry) {
 	width := imageData.Bounds().Dx()
 	height := imageData.Bounds().Dy()
 	originalRef := mgo.DBRef{"fs.files", originalImage.Id(), ""}
@@ -54,10 +54,6 @@ func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat st
 
 	targetImage.SetContentType(fmt.Sprintf("image/%s", imageFormat))
 	targetImage.SetMeta(metadata)
-
-	targetImage.Close()
-
-	return nil
 }
 
 // isModified returns true if the file must be delivered, false otherwise.
@@ -170,14 +166,9 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 			return
 		}
 
-		storeErr := storeImage(targetfile, *resizedImage, imageFormat, foundImage, resizeEntry)
+		addImageMetaData(targetfile, *resizedImage, imageFormat, foundImage, resizeEntry)
 
-		if storeErr != nil {
-			log.Fatalf(imageErr.Error())
-			w.WriteHeader(http.StatusBadRequest)
-			log.Printf("%d image could not be saved.\n", http.StatusBadRequest)
-			return
-		}
+		targetfile.Close()
 
 		fp, readErr := gridfs.Open(targetfile.Name())
 
