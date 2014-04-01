@@ -3,10 +3,10 @@ package server
 import (
 	"labix.org/v2/mgo"
 	. "launchpad.net/gocheck"
-	//	"labix.org/v2/mgo/bson"
-	//	"image"
+		"labix.org/v2/mgo/bson"
 	"io"
 	"os"
+//	"fmt"
 )
 
 // Checker: IsNil, ErrorMatches, Equals, HasLen, FitsTypeof, DeepEquals, NotNil, Not(Checker)
@@ -25,10 +25,28 @@ func (s *DatabaseTestSuite) SetUpTest(c *C) {
 
 	// set a jpeg image to gridfs
 	testJpeg, _ = os.Open("/../testdata/image.jpg")
-	defer testJpeg.Close()
 	io.Copy(gridfsfile, testJpeg)
 
 	gridfsfile.Close()
+
+	// create a new file with a parent
+	childFile, _ := gridfs.Create("child.jpg")
+
+	metadata := bson.M{
+		"width":            100,
+		"height":           200,
+		"originalFilename": "original.jpg",
+		"resizeType":       "crop"}
+
+	childFile.SetMeta(metadata)
+
+	// set a jpeg image to gridfs
+	defer testJpeg.Close()
+	io.Copy(childFile, testJpeg)
+
+	childFile.Close()
+
+
 }
 
 // TearDownTest removes the created test file.
@@ -45,6 +63,7 @@ func (s *DatabaseTestSuite) TestFindImageByParentFilename(c *C) {
 	file, err := FindImageByParentFilename("image.jpg", nil, gridfs)
 
 	c.Assert(file, NotNil)
+	c.Assert(file.Name(), Equals, "image.jpg")
 	c.Assert(err, IsNil)
 
 	file, err = FindImageByParentFilename("imagenotexisting.jpg", nil, gridfs)
@@ -52,4 +71,15 @@ func (s *DatabaseTestSuite) TestFindImageByParentFilename(c *C) {
 	c.Assert(file, IsNil)
 	c.Assert(err, NotNil)
 	c.Assert(err, ErrorMatches, "no image found for imagenotexisting.jpg")
+
+	entry := Entry{
+		Width: 100,
+		Height: 200,
+		Type: "crop"}
+
+	file, err = FindImageByParentFilename("original.jpg", &entry, gridfs)
+
+	c.Assert(file, NotNil)
+	c.Assert(file.Name(), Equals, "child.jpg")
+	c.Assert(err, IsNil)
 }
