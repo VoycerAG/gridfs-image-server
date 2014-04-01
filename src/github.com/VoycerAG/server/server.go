@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -23,13 +22,6 @@ const ImageCacheDuration = 315360000
 var Connection *mgo.Session
 var Configuration *Config
 
-// ServerConfiguration is a wrapper object for request parameters.
-type ServerConfiguration struct {
-	Database   string
-	FormatName string
-	Filename   string
-}
-
 // VarsHandler is a simple wrapper so the request params can be injected into the main handler
 type VarsHandler func(http.ResponseWriter, *http.Request, *ServerConfiguration)
 
@@ -38,7 +30,7 @@ type VarsHandler func(http.ResponseWriter, *http.Request, *ServerConfiguration)
 func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	requestConfig, validateError := createConfigurationFromVars(r, vars)
+	requestConfig, validateError := CreateConfigurationFromVars(r, vars)
 
 	if validateError != nil {
 		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
@@ -212,31 +204,6 @@ func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat st
 	targetImage.Close()
 
 	return nil
-}
-
-// createConfigurationFromVars validate all necessary request parameters
-func createConfigurationFromVars(r *http.Request, vars map[string]string) (*ServerConfiguration, error) {
-	config := ServerConfiguration{}
-
-	database := vars["database"]
-
-	if database == "" {
-		return nil, errors.New("database must not be empty")
-	}
-
-	filename := vars["filename"]
-
-	if filename == "" {
-		return nil, errors.New("filename must not be empty")
-	}
-
-	formatName := r.URL.Query().Get("size")
-
-	config.Database = database
-	config.FormatName = formatName
-	config.Filename = filename
-
-	return &config, nil
 }
 
 //Deliver is the startup method that parses configuration files and opens the mongo connection
