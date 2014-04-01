@@ -283,3 +283,28 @@ func (s *ImageTestSuite) TestEncodeGifImageNormal(c *C) {
 	c.Assert(encodeErr, IsNil)
 	c.Assert(testMongoGif.Size() > 0, Equals, true)
 }
+
+// TestEncodeGifNormalImage
+func (s *ImageTestSuite) TestEncodeGifImageAnimated(c *C) {
+	filename, _ := os.Getwd()
+	testGif, err := os.Open(filename + "/../testdata/animated.gif")
+
+	c.Assert(err, IsNil)
+	TestConnection, err = mgo.Dial("localhost")
+	c.Assert(err, IsNil)
+	TestConnection.SetMode(mgo.Monotonic, true)
+
+	testMongoGif, mongoErr := TestConnection.DB("unittest").GridFS("fs").Create("animated.gif")
+	c.Assert(mongoErr, IsNil)
+	c.Assert(testMongoGif, Not(IsNil))
+
+	imageStream, imageType, imgErr := image.Decode(testGif)
+
+	c.Assert(imgErr, IsNil)
+	c.Assert(imageStream.Bounds().Dx(), Equals, 306)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 350)
+
+	encodeErr := EncodeImage(testMongoGif, imageStream, imageType)
+	c.Assert(encodeErr, IsNil)
+	c.Assert(testMongoGif.Size() > 0, Equals, true)
+}
