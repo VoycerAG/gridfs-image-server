@@ -1,14 +1,10 @@
 package server
 
 import (
-	"code.google.com/p/graphics-go/graphics"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/nfnt/resize"
 	"image"
 	_ "image/gif"
 	"image/jpeg"
@@ -32,6 +28,25 @@ type ServerConfiguration struct {
 	Database   string
 	FormatName string
 	Filename   string
+}
+
+// VarsHandler is a simple wrapper so the request params can be injected into the main handler
+type VarsHandler func(http.ResponseWriter, *http.Request, *ServerConfiguration)
+
+// ServeHTTP wraps the imageHandler function and validates request parameters
+// in order to create a ServerConfiguration object
+func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	requestConfig, validateError := createConfigurationFromVars(r, vars)
+
+	if validateError != nil {
+		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	h(w, r, requestConfig)
 }
 
 // isModified returns true if the file must be delivered, false otherwise.
@@ -78,24 +93,6 @@ func setCacheHeaders(file *mgo.GridFile, w http.ResponseWriter) {
 	w.Header().Set("Date", file.UploadDate().Format(time.RFC1123))
 }
 
-type VarsHandler func(http.ResponseWriter, *http.Request, *ServerConfiguration)
-
-// ServeHTTP wraps the imageHandler function and validates request parameters
-// in order to create a ServerConfiguration object
-func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
-	requestConfig, validateError := createConfigurationFromVars(r, vars)
-
-	if validateError != nil {
-		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	h(w, r, requestConfig)
-}
-
 // imageHandler the main handler
 func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerConfiguration) {
 	log.Printf("Request on %s", r.URL)
@@ -138,7 +135,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 			return
 		}
 
-		resizedImage, imageFormat, imageErr := resizeImage(foundImage, resizeEntry)
+		resizedImage, imageFormat, imageErr := ResizeImage(foundImage, resizeEntry)
 
 		// in this case, resizing for this image does not work, therefore, we at least return the original image
 		if imageErr != nil {
@@ -152,7 +149,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 		}
 
 		// return the image to the client if all cache headers could be set
-		targetfile, _ := gridfs.Create(generateFilename(imageFormat))
+		targetfile, _ := gridfs.Create(GetRandomFilename(imageFormat))
 		storeErr := storeImage(targetfile, *resizedImage, imageFormat, foundImage, resizeEntry)
 
 		if storeErr != nil {
@@ -182,16 +179,6 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 			return
 		}
 	}
-}
-
-// generateFilename generates a new filename
-func generateFilename(imageFormat string) string {
-	hash := sha256.New()
-	hash.Write([]byte(fmt.Sprintf("%s", time.Now().Nanosecond())))
-	md := hash.Sum(nil)
-	mdStr := hex.EncodeToString(md)
-
-	return fmt.Sprintf("%s.%s", mdStr, imageFormat)
 }
 
 // storeImage
@@ -225,43 +212,6 @@ func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat st
 	targetImage.Close()
 
 	return nil
-}
-
-// resizeImage resizes images or crops them if either size is not defined
-func resizeImage(originalImage *mgo.GridFile, entry *Entry) (*image.Image, string, error) {
-	if entry.Width < 0 && entry.Height < 0 {
-		return nil, "", fmt.Errorf("At least one parameter of width or height must be specified")
-	}
-
-	originalImageData, imageFormat, imgErr := image.Decode(originalImage)
-
-	if imgErr != nil {
-		return nil, imageFormat, imgErr
-	}
-
-	targetHeight := float64(entry.Height)
-	targetWidth := float64(entry.Width)
-
-	if targetWidth < 0 {
-		targetWidth = 0
-	}
-
-	if targetHeight < 0 {
-		targetHeight = 0
-	}
-
-	imageRGBA := image.NewRGBA(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
-	err := graphics.Thumbnail(imageRGBA, originalImageData)
-
-	var dst image.Image
-
-	if entry.Type == TypeResize {
-		dst = resize.Resize(uint(targetWidth), uint(targetHeight), originalImageData, resize.Lanczos3)
-	} else {
-		dst = imageRGBA.SubImage(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
-	}
-
-	return &dst, imageFormat, err
 }
 
 // findImageByParentFilename returns either the resized image that actually exists, or the original if entry is nil
