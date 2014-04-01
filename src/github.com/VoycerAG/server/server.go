@@ -41,6 +41,23 @@ func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h(w, r, requestConfig)
 }
 
+// encodeImage encodes the image with the given format
+func encodeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string) error {
+
+	switch imageFormat {
+	case "jpeg":
+		jpeg.Encode(targetImage, imageData, &jpeg.Options{JpegMaximumQuality})
+	case "png":
+		png.Encode(targetImage, imageData)
+	case "gif":
+
+	default:
+		return fmt.Errorf("invalid imageFormat given")
+	}
+
+	return nil
+}
+
 // storeImage saves the image
 func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile, entry *Entry) error {
 	width := imageData.Bounds().Dx()
@@ -57,17 +74,6 @@ func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat st
 
 	targetImage.SetContentType(fmt.Sprintf("image/%s", imageFormat))
 	targetImage.SetMeta(metadata)
-
-	switch imageFormat {
-	case "jpeg":
-		jpeg.Encode(targetImage, imageData, &jpeg.Options{JpegMaximumQuality})
-	case "png":
-		png.Encode(targetImage, imageData)
-	case "gif":
-
-	default:
-		return fmt.Errorf("invalid imageFormat given")
-	}
 
 	targetImage.Close()
 
@@ -175,6 +181,15 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 
 		// return the image to the client if all cache headers could be set
 		targetfile, _ := gridfs.Create(GetRandomFilename(imageFormat))
+		encodeErr := encodeImage(targetfile, *resizedImage, imageFormat)
+
+		if encodeErr != nil {
+			log.Fatalf(imageErr.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			log.Printf("%d image could not be encoded.\n", http.StatusBadRequest)
+			return
+		}
+
 		storeErr := storeImage(targetfile, *resizedImage, imageFormat, foundImage, resizeEntry)
 
 		if storeErr != nil {
