@@ -100,7 +100,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 	gridfs := Connection.DB(requestConfig.Database).GridFS("fs")
 
 	resizeEntry, _ := Configuration.GetEntryByName(requestConfig.FormatName)
-	foundImage, _ := findImageByParentFilename(requestConfig.Filename, resizeEntry, gridfs)
+	foundImage, _ := FindImageByParentFilename(requestConfig.Filename, resizeEntry, gridfs)
 
 	// case that we do not want resizing and did not find any image
 	if foundImage == nil && resizeEntry == nil {
@@ -127,7 +127,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 
 	if foundImage == nil && resizeEntry != nil {
 		// generate new image
-		foundImage, _ = findImageByParentFilename(requestConfig.Filename, nil, gridfs)
+		foundImage, _ = FindImageByParentFilename(requestConfig.Filename, nil, gridfs)
 
 		if foundImage == nil {
 			log.Printf("%d Could not find original image.\n", http.StatusNotFound)
@@ -212,31 +212,6 @@ func storeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat st
 	targetImage.Close()
 
 	return nil
-}
-
-// findImageByParentFilename returns either the resized image that actually exists, or the original if entry is nil
-func findImageByParentFilename(filename string, entry *Entry, gridfs *mgo.GridFS) (*mgo.GridFile, error) {
-	var fp *mgo.GridFile
-	var query bson.M
-
-	if entry == nil {
-		query = bson.M{"filename": filename}
-	} else {
-		query = bson.M{
-			"metadata.originalFilename": filename,
-			"metadata.width":            entry.Width,
-			"metadata.resizeType":       entry.Type,
-			"metadata.height":           entry.Height}
-	}
-
-	iter := gridfs.Find(query).Iter()
-	gridfs.OpenNext(iter, &fp)
-
-	if fp == nil {
-		return fp, fmt.Errorf("no image found for %s", filename)
-	}
-
-	return fp, nil
 }
 
 // createConfigurationFromVars validate all necessary request parameters
