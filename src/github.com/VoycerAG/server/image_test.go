@@ -2,7 +2,7 @@ package server
 
 import (
 	"image"
-	_ "labix.org/v2/mgo"
+	"labix.org/v2/mgo"
 	. "launchpad.net/gocheck"
 	"os"
 )
@@ -12,6 +12,8 @@ import (
 type ImageTestSuite struct{}
 
 var testJpeg *os.File
+var testMongoJpeg *mgo.GridFile
+var TestConnection *mgo.Session
 
 var _ = Suite(&ImageTestSuite{})
 
@@ -21,11 +23,19 @@ func (s *ImageTestSuite) SetUpTest(c *C) {
 	var err error
 	testJpeg, err = os.Open(filename + "/../testdata/image.jpg")
 	c.Assert(err, IsNil)
+	TestConnection, err = mgo.Dial("localhost")
+	c.Assert(err, IsNil)
+	TestConnection.SetMode(mgo.Monotonic, true)
+
+	var mongoErr error
+
+	testMongoJpeg, mongoErr = TestConnection.DB("unittest").GridFS("fs").Create("test.jpg")
+	c.Assert(mongoErr, IsNil)
 }
 
 // TearDownTest removes the created test files.
 func (s *ImageTestSuite) TearDownTest(c *C) {
-
+	TestConnection.DB("unittest").DropDatabase()
 }
 
 // TestResizeImageInvalidEntryGiven
@@ -45,9 +55,9 @@ func (s *ImageTestSuite) TestValidEntryTypeResizeAndFormatForwarding(c *C) {
 
 	imageStream, _, imgErr := image.Decode(testJpeg)
 
+	c.Assert(imgErr, IsNil)
 	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
 	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
-	c.Assert(imgErr, IsNil)
 
 	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
 
@@ -63,9 +73,9 @@ func (s *ImageTestSuite) TestValidEntryTypeResizeAndFormatForwardingHeightMissin
 
 	imageStream, _, imgErr := image.Decode(testJpeg)
 
+	c.Assert(imgErr, IsNil)
 	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
 	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
-	c.Assert(imgErr, IsNil)
 
 	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
 
@@ -81,9 +91,9 @@ func (s *ImageTestSuite) TestValidEntryTypeResizeAndFormatForwardingWidthMissing
 
 	imageStream, _, imgErr := image.Decode(testJpeg)
 
+	c.Assert(imgErr, IsNil)
 	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
 	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
-	c.Assert(imgErr, IsNil)
 
 	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
 
@@ -99,9 +109,9 @@ func (s *ImageTestSuite) TestValidEntryTypeCutAndNonHeightGiven(c *C) {
 
 	imageStream, _, imgErr := image.Decode(testJpeg)
 
+	c.Assert(imgErr, IsNil)
 	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
 	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
-	c.Assert(imgErr, IsNil)
 
 	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
 
@@ -117,9 +127,9 @@ func (s *ImageTestSuite) TestValidEntryTypeCutAndNonWidthGiven(c *C) {
 
 	imageStream, _, imgErr := image.Decode(testJpeg)
 
+	c.Assert(imgErr, IsNil)
 	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
 	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
-	c.Assert(imgErr, IsNil)
 
 	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
 
@@ -135,9 +145,9 @@ func (s *ImageTestSuite) TestValidEntryTypeCutAndBothGiven(c *C) {
 
 	imageStream, _, imgErr := image.Decode(testJpeg)
 
+	c.Assert(imgErr, IsNil)
 	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
 	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
-	c.Assert(imgErr, IsNil)
 
 	imageData, imageFormat, imageError := ResizeImage(imageStream, "i do not care", &entry)
 
@@ -145,4 +155,92 @@ func (s *ImageTestSuite) TestValidEntryTypeCutAndBothGiven(c *C) {
 	c.Assert(imageError, IsNil)
 	c.Assert((*imageData).Bounds().Dx(), Equals, 800)
 	c.Assert((*imageData).Bounds().Dy(), Equals, 600)
+}
+
+// TestEncodeJpegImage
+func (s *ImageTestSuite) TestEncodeJpegImage(c *C) {
+	c.Assert(testMongoJpeg, Not(IsNil))
+
+	imageStream, _, imgErr := image.Decode(testJpeg)
+
+	c.Assert(imgErr, IsNil)
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
+
+	encodeErr := EncodeImage(testMongoJpeg, imageStream, "jpeg")
+	c.Assert(encodeErr, IsNil)
+
+	c.Assert(testMongoJpeg.Size() > 0, Equals, true)
+}
+
+// TestEncodePngImageInterlaced
+func (s *ImageTestSuite) TestEncodePngImageInterlaced(c *C) {
+	filename, _ := os.Getwd()
+	testPNG, err := os.Open(filename + "/../testdata/interlaced.png")
+	c.Assert(err, IsNil)
+	TestConnection, err = mgo.Dial("localhost")
+	c.Assert(err, IsNil)
+	TestConnection.SetMode(mgo.Monotonic, true)
+
+	testMongoPNG, mongoErr := TestConnection.DB("unittest").GridFS("fs").Create("interlaced.png")
+	c.Assert(mongoErr, IsNil)
+	c.Assert(testMongoPNG, Not(IsNil))
+
+	imageStream, imageType, imgErr := image.Decode(testPNG)
+
+	c.Assert(imgErr, IsNil)
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
+
+	encodeErr := EncodeImage(testMongoPNG, imageStream, imageType)
+	c.Assert(encodeErr, IsNil)
+	c.Assert(testMongoPNG.Size() > 0, Equals, true)
+}
+
+// TestEncodePngImageNormal
+func (s *ImageTestSuite) TestEncodePngImageNormal(c *C) {
+	filename, _ := os.Getwd()
+	testPNG, err := os.Open(filename + "/../testdata/normal.png")
+	c.Assert(err, IsNil)
+	TestConnection, err = mgo.Dial("localhost")
+	c.Assert(err, IsNil)
+	TestConnection.SetMode(mgo.Monotonic, true)
+
+	testMongoPNG, mongoErr := TestConnection.DB("unittest").GridFS("fs").Create("normal.png")
+	c.Assert(mongoErr, IsNil)
+	c.Assert(testMongoPNG, Not(IsNil))
+
+	imageStream, imageType, imgErr := image.Decode(testPNG)
+
+	c.Assert(imgErr, IsNil)
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
+
+	encodeErr := EncodeImage(testMongoPNG, imageStream, imageType)
+	c.Assert(encodeErr, IsNil)
+	c.Assert(testMongoPNG.Size() > 0, Equals, true)
+}
+
+// TestEncodePngImageTransparent
+func (s *ImageTestSuite) TestEncodePngImageTransparent(c *C) {
+	filename, _ := os.Getwd()
+	testPNG, err := os.Open(filename + "/../testdata/transparent.png")
+	c.Assert(err, IsNil)
+	TestConnection, err = mgo.Dial("localhost")
+	c.Assert(err, IsNil)
+	TestConnection.SetMode(mgo.Monotonic, true)
+
+	testMongoPNG, mongoErr := TestConnection.DB("unittest").GridFS("fs").Create("transparent.png")
+	c.Assert(mongoErr, IsNil)
+	c.Assert(testMongoPNG, Not(IsNil))
+
+	imageStream, imageType, imgErr := image.Decode(testPNG)
+
+	c.Assert(imgErr, IsNil)
+	c.Assert(imageStream.Bounds().Dx(), Equals, 320)
+	c.Assert(imageStream.Bounds().Dy(), Equals, 240)
+
+	encodeErr := EncodeImage(testMongoPNG, imageStream, imageType)
+	c.Assert(encodeErr, IsNil)
+	c.Assert(testMongoPNG.Size() > 0, Equals, true)
 }
