@@ -389,3 +389,24 @@ func (s *ImageTestSuite) TestFallbackToImageMagick(c *C) {
 	c.Assert(decodedImage.Bounds().Dx(), Equals, 320)
 	c.Assert(decodedImage.Bounds().Dy(), Equals, 240)
 }
+
+//TestFallbackToImageMagickFails
+func (s *ImageTestSuite) TestFallbackToImageMagickFails(c *C) {
+	var err error
+	TestConnection, err = mgo.Dial("localhost")
+	c.Assert(err, IsNil)
+	TestConnection.SetMode(mgo.Monotonic, true)
+
+	testMongoPNG, mongoErr := TestConnection.DB("unittest").GridFS("fs").Create("interlaced.png")
+	c.Assert(mongoErr, IsNil)
+	c.Assert(testMongoPNG, Not(IsNil))
+
+	testMongoPNG.Close()
+
+	testMongoPNG, err = TestConnection.DB("unittest").GridFS("fs").Open("interlaced.png")
+	c.Assert(err, IsNil)
+
+	_, err = imageMagickFallback(testMongoPNG)
+
+	c.Assert(err, ErrorMatches, "exit status 1")
+}
