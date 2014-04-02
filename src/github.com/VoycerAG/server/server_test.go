@@ -231,5 +231,37 @@ func (s *ServerTestSuite) TestimageHandlerImageNotFoundWithoutResize(c *C) {
 	imageHandler(&responseWriter, r, &requestConfig)
 
 	c.Assert(responseWriter.HeaderCode, Equals, 400)
+}
 
+func (s *ServerTestSuite) TestimageHandlerImageCached(c *C) {
+	Connection, _ = mgo.Dial("localhost")
+
+	config := Config{}
+	config.AllowedEntries = append(config.AllowedEntries, Entry{
+			Name: "test",
+			Width: 100,
+			Height: 200,
+			Type: "crop"})
+
+	Configuration = &config
+
+	requestConfig := ServerConfiguration{
+		Database: "unittest",
+		FormatName: "",
+		Filename: "test.jpg"}
+
+	modified := time.Now().Format(time.RFC1123)
+
+	header := http.Header{}
+
+	responseWriter := ResponseWriterMock{header, -1}
+
+	r, _ := http.NewRequest("GET", "test-url", nil)
+	r.Header.Set("If-None-Match", "d5b390993a34a440891a6f20407f9dde")
+	r.Header.Set("Cache-Control", fmt.Sprintf("max-age=%d", 1000))
+	r.Header.Set("If-Modified-Since", modified)
+
+	imageHandler(&responseWriter, r, &requestConfig)
+
+	c.Assert(responseWriter.HeaderCode, Equals, 304)
 }
