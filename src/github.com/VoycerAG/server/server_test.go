@@ -97,27 +97,27 @@ func (s *ServerTestSuite) TestCacheHitSuccess(c *C) {
 	c.Assert(isModified(testMongoFile, &header), Equals, false)
 }
 
-type TestResponseWriter struct {
+type ResponseWriterMock struct {
 	HeaderData http.Header
 	HeaderCode int
 }
 
-func (t *TestResponseWriter) Header() http.Header {
+func (t *ResponseWriterMock) Header() http.Header {
 	return t.HeaderData
 }
 
-func (t *TestResponseWriter) Write(b []byte) (int, error) {
+func (t *ResponseWriterMock) Write(b []byte) (int, error) {
 	return -1, fmt.Errorf("not implemented")
 }
 
-func (t *TestResponseWriter) WriteHeader(code int) {
+func (t *ResponseWriterMock) WriteHeader(code int) {
 	t.HeaderCode = code
 }
 
 // TestSetCacheHeaders uses a mocked response writer in order to get header values from method
 func (s *ServerTestSuite) TestSetCacheHeaders(c *C) {
 	header := http.Header{}
-	responseWriter := TestResponseWriter{header, -1}
+	responseWriter := ResponseWriterMock{header, -1}
 
 	d, _ := time.ParseDuration(fmt.Sprintf("%ds", ImageCacheDuration))
 
