@@ -47,7 +47,10 @@ func (s *ServerTestSuite) SetUpTest(c *C) {
 // TearDownTest removes the created test file.
 func (s *ServerTestSuite) TearDownTest(c *C) {
 	TestCon, _ = mgo.Dial("localhost")
-	Connection.DB("unittest").DropDatabase()
+
+	if Connection != nil {
+		Connection.DB("unittest").DropDatabase()
+	}
 }
 
 // TestIsModifiedNoCache
@@ -134,4 +137,44 @@ func (s *ServerTestSuite) TestSetCacheHeaders(c *C) {
 	c.Assert(expectedLastModified, Equals, header.Get("Last-Modified"))
 	c.Assert(expectedExpiryDate, Equals, header.Get("Expires"))
 	c.Assert(expectedDate, Equals, header.Get("Date"))
+}
+
+func (s *ServerTestSuite) TestimageHandlerConfigurationNotFound(c *C) {
+	Connection, _ = mgo.Dial("localhost")
+	Configuration = nil
+
+	requestConfig := ServerConfiguration{
+		Database: "unittest",
+		FormatName: "jpg",
+		Filename: "test.jpg"}
+
+	header := http.Header{}
+	responseWriter := ResponseWriterMock{header, -1}
+
+	r, _ := http.NewRequest("GET", "test-url", nil)
+
+	imageHandler(&responseWriter, r, &requestConfig)
+
+	c.Assert(responseWriter.HeaderCode, Equals, 500)
+}
+
+
+func (s *ServerTestSuite) TestimageHandlerConnectionNotFound(c *C) {
+	config := Config{}
+	Configuration = &config
+	Connection = nil
+
+	requestConfig := ServerConfiguration{
+		Database: "unittest",
+		FormatName: "jpg",
+		Filename: "test.jpg"}
+
+	header := http.Header{}
+	responseWriter := ResponseWriterMock{header, -1}
+
+	r, _ := http.NewRequest("GET", "test-url", nil)
+
+	imageHandler(&responseWriter, r, &requestConfig)
+
+	c.Assert(responseWriter.HeaderCode, Equals, 500)
 }

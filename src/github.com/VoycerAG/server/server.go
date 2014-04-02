@@ -104,6 +104,18 @@ func setCacheHeaders(file *mgo.GridFile, w http.ResponseWriter) {
 func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerConfiguration) {
 	log.Printf("Request on %s", r.URL)
 
+	if Connection == nil {
+		log.Printf("Connection is not set.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if Configuration == nil {
+		log.Printf("Configuration object is not set.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	gridfs := Connection.DB(requestConfig.Database).GridFS("fs")
 
 	resizeEntry, _ := Configuration.GetEntryByName(requestConfig.FormatName)
