@@ -360,3 +360,32 @@ func (s *ImageTestSuite) TestResizeImageFromGridFs(c *C) {
 	c.Assert((*imageResult).Bounds().Dx(), Equals, 800)
 	c.Assert((*imageResult).Bounds().Dy(), Equals, 600)
 }
+
+//TestFallbackToImageMagick
+func (s *ImageTestSuite) TestFallbackToImageMagick(c *C) {
+	filename, _ := os.Getwd()
+	testPNG, err := os.Open(filename + "/../testdata/interlaced.png")
+	c.Assert(err, IsNil)
+	TestConnection, err = mgo.Dial("localhost")
+	c.Assert(err, IsNil)
+	TestConnection.SetMode(mgo.Monotonic, true)
+
+	testMongoPNG, mongoErr := TestConnection.DB("unittest").GridFS("fs").Create("interlaced.png")
+	c.Assert(mongoErr, IsNil)
+	c.Assert(testMongoPNG, Not(IsNil))
+
+	io.Copy(testMongoPNG, testPNG)
+	testMongoPNG.Close()
+
+	testMongoPNG, err = TestConnection.DB("unittest").GridFS("fs").Open("interlaced.png")
+	c.Assert(err, IsNil)
+
+	var decodedImage image.Image
+
+	decodedImage, err = imageMagickFallback(testMongoPNG)
+
+	c.Assert(nil, Equals, err)
+
+	c.Assert(decodedImage.Bounds().Dx(), Equals, 320)
+	c.Assert(decodedImage.Bounds().Dy(), Equals, 240)
+}
