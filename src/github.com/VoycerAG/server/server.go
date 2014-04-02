@@ -124,7 +124,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 	// case that we do not want resizing and did not find any image
 	if foundImage == nil && resizeEntry == nil {
 		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

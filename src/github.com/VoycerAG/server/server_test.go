@@ -205,3 +205,31 @@ func (s *ServerTestSuite) TestimageHandlerImageNotFound(c *C) {
 
 	c.Assert(responseWriter.HeaderCode, Equals, 404)
 }
+
+func (s *ServerTestSuite) TestimageHandlerImageNotFoundWithoutResize(c *C) {
+	Connection, _ = mgo.Dial("localhost")
+
+	config := Config{}
+	config.AllowedEntries = append(config.AllowedEntries, Entry{
+			Name: "test",
+			Width: 100,
+			Height: 200,
+			Type: "crop"})
+
+	Configuration = &config
+
+	requestConfig := ServerConfiguration{
+		Database: "unittest",
+		FormatName: "notexisting",
+		Filename: "notexisting.jpg"}
+
+	header := http.Header{}
+	responseWriter := ResponseWriterMock{header, -1}
+
+	r, _ := http.NewRequest("GET", "test-url", nil)
+
+	imageHandler(&responseWriter, r, &requestConfig)
+
+	c.Assert(responseWriter.HeaderCode, Equals, 400)
+
+}
