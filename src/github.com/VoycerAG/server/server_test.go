@@ -103,6 +103,15 @@ func (s *ServerTestSuite) TestCacheHitSuccess(c *C) {
 type ResponseWriterMock struct {
 	HeaderData http.Header
 	HeaderCode int
+	Body []byte
+}
+
+func NewResponseWriter(header http.Header, code int) (ResponseWriterMock) {
+	mock := ResponseWriterMock{}
+	mock.HeaderData = header
+	mock.HeaderCode = code
+
+	return mock
 }
 
 func (t *ResponseWriterMock) Header() http.Header {
@@ -110,6 +119,7 @@ func (t *ResponseWriterMock) Header() http.Header {
 }
 
 func (t *ResponseWriterMock) Write(b []byte) (int, error) {
+	t.Body = b
 	return -1, fmt.Errorf("not implemented")
 }
 
@@ -120,7 +130,7 @@ func (t *ResponseWriterMock) WriteHeader(code int) {
 // TestSetCacheHeaders uses a mocked response writer in order to get header values from method
 func (s *ServerTestSuite) TestSetCacheHeaders(c *C) {
 	header := http.Header{}
-	responseWriter := ResponseWriterMock{header, -1}
+	responseWriter := NewResponseWriter(header, -1)
 
 	d, _ := time.ParseDuration(fmt.Sprintf("%ds", ImageCacheDuration))
 
@@ -149,7 +159,7 @@ func (s *ServerTestSuite) TestimageHandlerConfigurationNotFound(c *C) {
 		Filename: "test.jpg"}
 
 	header := http.Header{}
-	responseWriter := ResponseWriterMock{header, -1}
+	responseWriter := NewResponseWriter(header, -1)
 
 	r, _ := http.NewRequest("GET", "test-url", nil)
 
@@ -170,7 +180,7 @@ func (s *ServerTestSuite) TestimageHandlerConnectionNotFound(c *C) {
 		Filename: "test.jpg"}
 
 	header := http.Header{}
-	responseWriter := ResponseWriterMock{header, -1}
+	responseWriter := NewResponseWriter(header, -1)
 
 	r, _ := http.NewRequest("GET", "test-url", nil)
 
@@ -197,7 +207,7 @@ func (s *ServerTestSuite) TestimageHandlerImageNotFound(c *C) {
 		Filename: "notexisting.jpg"}
 
 	header := http.Header{}
-	responseWriter := ResponseWriterMock{header, -1}
+	responseWriter := NewResponseWriter(header, -1)
 
 	r, _ := http.NewRequest("GET", "test-url", nil)
 
@@ -224,7 +234,7 @@ func (s *ServerTestSuite) TestimageHandlerImageNotFoundWithoutResize(c *C) {
 		Filename: "notexisting.jpg"}
 
 	header := http.Header{}
-	responseWriter := ResponseWriterMock{header, -1}
+	responseWriter := NewResponseWriter(header, -1)
 
 	r, _ := http.NewRequest("GET", "test-url", nil)
 
@@ -254,7 +264,7 @@ func (s *ServerTestSuite) TestimageHandlerImageCached(c *C) {
 
 	header := http.Header{}
 
-	responseWriter := ResponseWriterMock{header, -1}
+	responseWriter := NewResponseWriter(header, -1)
 
 	r, _ := http.NewRequest("GET", "test-url", nil)
 	r.Header.Set("If-None-Match", "d5b390993a34a440891a6f20407f9dde")
