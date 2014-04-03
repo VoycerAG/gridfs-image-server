@@ -1,1 +1,1 @@
-source ~/golang-crosscompile/crosscompile.bash && cd src/github.com/VoycerAG && go-linux-amd64 build && mv VoycerAG ../../../image-server.linux.x64 
+source ~/golang-crosscompile/crosscompile.bash && cd src/github.com/VoycerAG && go-linux-amd64 build && mv VoycerAG ../../../image-server.linux.x64 && echo "image-server.linux.x64 Successful created" 
