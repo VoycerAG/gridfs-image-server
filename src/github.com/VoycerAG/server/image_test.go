@@ -102,9 +102,9 @@ func (s *ImageTestSuite) TestValidEntryTypeResizeAndFormatForwardingWidthMissing
 	c.Assert((*imageData).Bounds().Dy(), Equals, 400)
 }
 
-// TestValidEntryTypeCutAndNonHeightGiven
-func (s *ImageTestSuite) TestValidEntryTypeCutAndNonHeightGiven(c *C) {
-	entry := Entry{"test", 400, -1, TypeCut}
+// TestValidEntryTypeCropAndNonHeightGiven
+func (s *ImageTestSuite) TestValidEntryTypeCropAndNonHeightGiven(c *C) {
+	entry := Entry{"test", 400, -1, TypeCrop}
 
 	imageStream, _, imgErr := image.Decode(testJpeg)
 
@@ -120,9 +120,9 @@ func (s *ImageTestSuite) TestValidEntryTypeCutAndNonHeightGiven(c *C) {
 	c.Assert((*imageData).Bounds().Dy(), Equals, 300)
 }
 
-// TestValidEntryTypeCutAndNonWidthGiven
-func (s *ImageTestSuite) TestValidEntryTypeCutAndNonWidthGiven(c *C) {
-	entry := Entry{"test", -1, 300, TypeCut}
+// TestValidEntryTypeCropAndNonWidthGiven
+func (s *ImageTestSuite) TestValidEntryTypeCropAndNonWidthGiven(c *C) {
+	entry := Entry{"test", -1, 300, TypeCrop}
 
 	imageStream, _, imgErr := image.Decode(testJpeg)
 
@@ -138,9 +138,9 @@ func (s *ImageTestSuite) TestValidEntryTypeCutAndNonWidthGiven(c *C) {
 	c.Assert((*imageData).Bounds().Dy(), Equals, 300)
 }
 
-// TestValidEntryTypeCutAndBothGiven
-func (s *ImageTestSuite) TestValidEntryTypeCutAndBothGiven(c *C) {
-	entry := Entry{"test", 800, 600, TypeCut}
+// TestValidEntryTypeCropAndBothGiven
+func (s *ImageTestSuite) TestValidEntryTypeCropAndBothGiven(c *C) {
+	entry := Entry{"test", 800, 600, TypeCrop}
 
 	imageStream, _, imgErr := image.Decode(testJpeg)
 
@@ -324,7 +324,7 @@ func (s *ImageTestSuite) TestResizeImageFromGridFsInterlacedNoEncodingError(c *C
 	io.Copy(testMongoPNG, testPNG)
 	testMongoPNG.Close()
 
-	entry := Entry{"test", 800, 600, TypeCut}
+	entry := Entry{"test", 800, 600, TypeCrop}
 
 	testMongoPNG, err = TestConnection.DB("unittest").GridFS("fs").Open("interlaced.png")
 	c.Assert(err, IsNil)
@@ -349,7 +349,7 @@ func (s *ImageTestSuite) TestResizeImageFromGridFs(c *C) {
 	io.Copy(testMongoPNG, testPNG)
 	testMongoPNG.Close()
 
-	entry := Entry{"test", 800, 600, TypeCut}
+	entry := Entry{"test", 800, 600, TypeCrop}
 
 	testMongoPNG, err = TestConnection.DB("unittest").GridFS("fs").Open("normal.png")
 	c.Assert(err, IsNil)

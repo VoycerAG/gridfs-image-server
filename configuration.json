@@ -55,7 +55,7 @@
 			"name" : "landscape2", 
 			"width" : 800, 
 			"height" : 50, 
-		  "type":"cut" 
+		  "type":"crop"
 		}
 
 	]

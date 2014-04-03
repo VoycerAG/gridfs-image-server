@@ -12,7 +12,7 @@ type Config struct {
 
 const (
 	TypeResize = "resize"
-	TypeCut    = "cut"
+	TypeCrop    = "crop"
 )
 
 type Entry struct {
@@ -51,8 +51,8 @@ func (config *Config) validateConfig() error {
 			continue
 		}
 
-		if element.Type != TypeResize && element.Type != TypeCut {
-			return fmt.Errorf("Type must be either %s or %s at element \"%s\"", TypeCut, TypeResize, element.Name)
+		if element.Type != TypeResize && element.Type != TypeCrop {
+			return fmt.Errorf("Type must be either %s or %s at element \"%s\"", TypeCrop, TypeResize, element.Name)
 		}
 	}
 
