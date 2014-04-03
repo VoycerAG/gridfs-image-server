@@ -1,0 +1,62 @@
+{
+	"allowedEntries" : [
+		{
+			"name" : "45x35", 
+			"width" : 45, 
+			"height" : 35
+		}, 
+		{
+			"name" : "294x300", 
+			"width" : 294, 
+			"height" : 300
+		},
+		{
+			"name" : "294x210", 
+			"width" : 200, 
+			"height" : 210
+		},
+		{
+			"name" : "105x95", 
+			"width" : 105, 
+			"height" : 95 
+		},
+		{
+			"name" : "50x40", 
+			"width" : 50, 
+			"height" : 40 
+		},
+		{
+			"name" : "50x50", 
+			"width" : 30, 
+			"height" : 30 
+		},
+		{
+			"name" : "130x260", 
+			"width" : 130, 
+			"height" : 260 
+		},
+		{
+			"name" : "310x230", 
+			"width" : -1, 
+			"height" : 230 
+		},
+		{
+			"name" : "302x302", 
+			"width" : 302, 
+			"height" : -1 
+		},
+		{
+			"name" : "landscape", 
+			"width" : 800, 
+			"height" : 50, 
+		  "type":"resize" 
+		},
+		{
+			"name" : "landscape2", 
+			"width" : 800, 
+			"height" : 50, 
+		  "type":"crop"
+		}
+
+	]
+}
