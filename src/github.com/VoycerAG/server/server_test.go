@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"crypto/md5"
+	"encoding/hex"
 )
 
 type ServerTestSuite struct{}
@@ -274,4 +276,39 @@ func (s *ServerTestSuite) TestimageHandlerImageCached(c *C) {
 	imageHandler(&responseWriter, r, &requestConfig)
 
 	c.Assert(responseWriter.HeaderCode, Equals, 304)
+}
+
+func (s *ServerTestSuite) TestimageHandlerNotCachedParent(c *C) {
+	Connection, _ = mgo.Dial("localhost")
+
+	config := Config{}
+	config.AllowedEntries = append(config.AllowedEntries, Entry{
+			Name: "test",
+			Width: 100,
+			Height: 200,
+			Type: "crop"})
+
+	Configuration = &config
+
+	requestConfig := ServerConfiguration{
+		Database: "unittest",
+		FormatName: "",
+		Filename: "test.jpg"}
+
+	header := http.Header{}
+	responseWriter := NewResponseWriter(header, -1)
+
+	r, _ := http.NewRequest("GET", "test-url", nil)
+
+	imageHandler(&responseWriter, r, &requestConfig)
+
+	// The default value of the responseWriterMock is -1
+	c.Assert(responseWriter.HeaderCode, Equals, -1)
+
+	c.Assert(responseWriter.Header().Get("Etag"), Equals, "d5b390993a34a440891a6f20407f9dde")
+
+	hexMd5 := md5.Sum(responseWriter.Body)
+	md5String := hex.EncodeToString(hexMd5[:16])
+
+	c.Assert(md5String, Equals, "d5b390993a34a440891a6f20407f9dde")
 }
