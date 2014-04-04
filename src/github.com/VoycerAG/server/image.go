@@ -128,7 +128,7 @@ func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry
 }
 
 // EncodeImage encodes the image with the given format
-func EncodeImage(targetImage *mgo.GridFile, imageData image.Image, imageFormat string) error {
+func EncodeImage(targetImage io.Writer, imageData image.Image, imageFormat string) error {
 	switch imageFormat {
 	case "jpeg":
 		jpeg.Encode(targetImage, imageData, &jpeg.Options{JpegMaximumQuality})

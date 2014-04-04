@@ -171,6 +171,12 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 		targetfile, _ := gridfs.Create(GetRandomFilename(imageFormat))
 		encodeErr := EncodeImage(targetfile, *resizedImage, imageFormat)
 
+		if targetfile == nil {
+			log.Printf("new gridfs file could not be created")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		if encodeErr != nil {
 			log.Fatalf(imageErr.Error())
 			w.WriteHeader(http.StatusBadRequest)
@@ -180,27 +186,19 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 
 		addImageMetaData(targetfile, *resizedImage, imageFormat, foundImage, resizeEntry)
 
-		targetfile.Close()
+		defer targetfile.Close()
 
-		fp, readErr := gridfs.Open(targetfile.Name())
-
-		if fp != nil {
-			if !isModified(fp, &r.Header) {
-				w.WriteHeader(http.StatusNotModified)
-				log.Printf("%d Returning cached image.\n", http.StatusNotModified)
-				return
-			}
-
-			setCacheHeaders(fp, w)
-
-			io.Copy(w, fp)
-			fp.Close()
-			log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
-		} else {
-			log.Printf(readErr.Error())
-			w.WriteHeader(http.StatusBadRequest)
+		if !isModified(targetfile, &r.Header) {
+			w.WriteHeader(http.StatusNotModified)
+			log.Printf("%d Returning cached image.\n", http.StatusNotModified)
 			return
 		}
+
+		setCacheHeaders(targetfile, w)
+
+		EncodeImage(w, *resizedImage, imageFormat)
+		targetfile.Close()
+		log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
 	}
 }
 
