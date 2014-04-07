@@ -361,6 +361,31 @@ func (s *ImageTestSuite) TestResizeImageFromGridFs(c *C) {
 	c.Assert((*imageResult).Bounds().Dy(), Equals, 600)
 }
 
+//TestResizeImageFromGridFs
+func (s *ImageTestSuite) TestResizeJpegImageFromGridFsCMYK(c *C) {
+	filename, _ := os.Getwd()
+	testPNG, err := os.Open(filename + "/../testdata/failure.JPG")
+	c.Assert(err, IsNil)
+	TestConnection, err = mgo.Dial("localhost")
+	c.Assert(err, IsNil)
+	TestConnection.SetMode(mgo.Monotonic, true)
+
+	testMongoPNG, mongoErr := TestConnection.DB("unittest").GridFS("fs").Create("failure.JPG")
+	c.Assert(mongoErr, IsNil)
+	c.Assert(testMongoPNG, Not(IsNil))
+
+	io.Copy(testMongoPNG, testPNG)
+	testMongoPNG.Close()
+
+	entry := Entry{"test", 300, 200, TypeCrop}
+
+	testMongoPNG, err = TestConnection.DB("unittest").GridFS("fs").Open("failure.JPG")
+	c.Assert(err, IsNil)
+
+	_, _, errResult := ResizeImageFromGridfs(testMongoPNG, &entry)
+	c.Assert(errResult, ErrorMatches, "unsupported JPEG feature: SOF has wrong length")
+}
+
 //TestFallbackToImageMagick
 func (s *ImageTestSuite) TestFallbackToImageMagick(c *C) {
 	filename, _ := os.Getwd()
