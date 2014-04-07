@@ -2,8 +2,8 @@
 	"allowedEntries" : [
 		{
 			"name" : "45x35", 
-			"width" : 45, 
-			"height" : -1,
+			"width" : -1, 
+			"height" : 35,
 			"type" : "resize"
 		}, 
 		{

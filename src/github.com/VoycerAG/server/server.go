@@ -188,12 +188,6 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 
 		defer targetfile.Close()
 
-		if !isModified(targetfile, &r.Header) {
-			w.WriteHeader(http.StatusNotModified)
-			log.Printf("%d Returning cached image.\n", http.StatusNotModified)
-			return
-		}
-
 		setCacheHeaders(targetfile, w)
 
 		EncodeImage(w, *resizedImage, imageFormat)
