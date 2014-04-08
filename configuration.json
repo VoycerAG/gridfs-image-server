@@ -14,7 +14,7 @@
 		},
 		{
 			"name" : "294x210", 
-			"width" : 200, 
+			"width" : 294, 
 			"height" : 210,
 			"type" : "crop"
 		},
@@ -38,8 +38,8 @@
 		},
 		{
 			"name" : "50x50", 
-			"width" : 30, 
-			"height" : 30,
+			"width" : 50, 
+			"height" : 50,
 			"type" : "crop" 
 		},
 		{
