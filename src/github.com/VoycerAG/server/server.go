@@ -3,6 +3,7 @@ package server
 import (
 	"flag"
 	"fmt"
+	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"image"
 	"io"
@@ -241,7 +242,7 @@ func Deliver() int {
 
 	http.Handle("/", r)
 
-	err = http.ListenAndServe(fmt.Sprintf(":%d", *serverPort), nil)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", *serverPort), context.ClearHandler(http.DefaultServeMux))
 
 	if err != nil {
 		log.Fatal(err)
