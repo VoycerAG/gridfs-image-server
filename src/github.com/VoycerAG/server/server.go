@@ -10,6 +10,7 @@ import (
 	"labix.org/v2/mgo/bson"
 	"log"
 	"net/http"
+	"runtime"
 	"time"
 )
 
@@ -104,6 +105,10 @@ func setCacheHeaders(file *mgo.GridFile, w http.ResponseWriter) {
 func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerConfiguration) {
 	log.Printf("Request on %s", r.URL)
 
+	defer func() {
+		runtime.GC()
+	}()
+
 	if Connection == nil {
 		log.Printf("Connection is not set.")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -169,6 +174,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 
 		// return the image to the client if all cache headers could be set
 		targetfile, _ := gridfs.Create(GetRandomFilename(imageFormat))
+
 		encodeErr := EncodeImage(targetfile, *resizedImage, imageFormat)
 
 		if targetfile == nil {
