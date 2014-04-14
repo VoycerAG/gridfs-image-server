@@ -11,8 +11,12 @@ type Config struct {
 }
 
 const (
+	// resize will either force the given sizes, or resize via original ratio when either height or width is not specified
 	TypeResize = "resize"
-	TypeCrop    = "crop"
+	// crop will generate an image with exact sizes, but only a part of the image is visible
+	TypeCrop = "crop"
+	// fit will resize the image according to the original ratio, but will not exceed the given bounds
+	TypeFit = "fit"
 )
 
 type Entry struct {
@@ -51,8 +55,8 @@ func (config *Config) validateConfig() error {
 			continue
 		}
 
-		if element.Type != TypeResize && element.Type != TypeCrop {
-			return fmt.Errorf("Type must be either %s or %s at element \"%s\"", TypeCrop, TypeResize, element.Name)
+		if element.Type != TypeResize && element.Type != TypeCrop && element.Type != TypeFit {
+			return fmt.Errorf("Type must be either %s, %s or %s at element \"%s\"", TypeCrop, TypeResize, TypeFit, element.Name)
 		}
 	}
 

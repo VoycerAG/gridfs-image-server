@@ -163,7 +163,7 @@ func (s *ConfigTestSuite) TestValidateConfigInvalidType(c *C) {
 
 	err = configObject.validateConfig()
 	c.Assert(err, NotNil)
-	c.Assert(err, ErrorMatches, "Type must be either crop or resize at element \"invalid\"")
+	c.Assert(err, ErrorMatches, "Type must be either crop, resize or fit at element \"invalid\"")
 }
 
 // TestValidateConfigInvalidType tests that an error will be returned when an invalid type was given
