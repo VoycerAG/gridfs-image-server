@@ -435,3 +435,105 @@ func (s *ImageTestSuite) TestFallbackToImageMagickFails(c *C) {
 
 	c.Assert(err, ErrorMatches, "exit status 1")
 }
+
+//TestValidEntryTypeFitLandscape
+func (s *ImageTestSuite) TestValidEntryTypeFitLandscapeOriginalLandscape(c *C) {
+	entry := Entry{"test", 310, 230, TypeFit}
+
+	imageRGBA := image.NewRGBA(image.Rect(0, 0, 168, 105))
+
+	c.Assert(imageRGBA.Bounds().Dx(), Equals, 168)
+	c.Assert(imageRGBA.Bounds().Dy(), Equals, 105)
+
+	imageData, imageFormat, imageError := ResizeImage(imageRGBA, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 310)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 193)
+}
+
+//TestValidEntryTypeFitPortrait
+func (s *ImageTestSuite) TestValidEntryTypeFitPortraitOriginalLandscape(c *C) {
+	entry := Entry{"test", 130, 260, TypeFit}
+
+	imageRGBA := image.NewRGBA(image.Rect(0, 0, 168, 105))
+
+	c.Assert(imageRGBA.Bounds().Dx(), Equals, 168)
+	c.Assert(imageRGBA.Bounds().Dy(), Equals, 105)
+
+	imageData, imageFormat, imageError := ResizeImage(imageRGBA, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 130)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 81)
+}
+
+//TestValidEntryTypeFitLandscape
+func (s *ImageTestSuite) TestValidEntryTypeFitLandscapeOriginalPortrait(c *C) {
+	entry := Entry{"test", 310, 230, TypeFit}
+
+	imageRGBA := image.NewRGBA(image.Rect(0, 0, 50, 300))
+
+	c.Assert(imageRGBA.Bounds().Dx(), Equals, 50)
+	c.Assert(imageRGBA.Bounds().Dy(), Equals, 300)
+
+	imageData, imageFormat, imageError := ResizeImage(imageRGBA, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 38)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 230)
+}
+
+//TestValidEntryTypeFitPortrait
+func (s *ImageTestSuite) TestValidEntryTypeFitPortraitOriginalPortrait(c *C) {
+	entry := Entry{"test", 130, 260, TypeFit}
+
+	imageRGBA := image.NewRGBA(image.Rect(0, 0, 50, 300))
+
+	c.Assert(imageRGBA.Bounds().Dx(), Equals, 50)
+	c.Assert(imageRGBA.Bounds().Dy(), Equals, 300)
+
+	imageData, imageFormat, imageError := ResizeImage(imageRGBA, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 43)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 260)
+}
+
+//TestValidEntryTypeFitPortraitSameRatio
+func (s *ImageTestSuite) TestValidEntryTypeFitPortraitSameRatio(c *C) {
+	entry := Entry{"test", 130, 260, TypeFit}
+
+	imageRGBA := image.NewRGBA(image.Rect(0, 0, 130, 260))
+
+	c.Assert(imageRGBA.Bounds().Dx(), Equals, 130)
+	c.Assert(imageRGBA.Bounds().Dy(), Equals, 260)
+
+	imageData, imageFormat, imageError := ResizeImage(imageRGBA, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 130)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 260)
+}
+
+//TestValidEntryTypeFitPortraitSameRatio
+func (s *ImageTestSuite) TestValidEntryTypeFitLandscapeSameRatio(c *C) {
+	entry := Entry{"test", 310, 230, TypeFit}
+
+	imageRGBA := image.NewRGBA(image.Rect(0, 0, 310, 230))
+
+	c.Assert(imageRGBA.Bounds().Dx(), Equals, 310)
+	c.Assert(imageRGBA.Bounds().Dy(), Equals, 230)
+
+	imageData, imageFormat, imageError := ResizeImage(imageRGBA, "i do not care", &entry)
+
+	c.Assert(imageFormat, Equals, "i do not care")
+	c.Assert(imageError, IsNil)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 310)
+	c.Assert((*imageData).Bounds().Dy(), Equals, 230)
+}

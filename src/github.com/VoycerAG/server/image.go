@@ -95,6 +95,10 @@ func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry
 	var dst image.Image
 	var err error
 
+	// the Thumbnail method needs correctly adjusted bounds in order to work
+	originalBounds := originalImageData.Bounds()
+	originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
+
 	if entry.Type == TypeResize {
 		// the Resize method automatically adjusts ratio based format when one parameter is zero
 		if targetWidth < 0 {
@@ -106,11 +110,22 @@ func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry
 		}
 
 		dst = resize.Resize(uint(targetWidth), uint(targetHeight), originalImageData, resize.Lanczos3)
-	} else {
-		// the Thumbnail method needs correctly adjusted bounds in order to work
-		originalBounds := originalImageData.Bounds()
-		originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
+	} else if entry.Type == TypeFit {
+		if targetWidth < 0 || targetHeight < 0 {
+			return nil, "", fmt.Errorf("When using type fit, both height and width must be specified")
+		}
 
+		targetRatio := targetWidth / targetHeight
+
+		if targetRatio < originalRatio {
+			targetHeight = targetWidth / originalRatio
+		} else {
+			targetWidth = targetHeight * originalRatio
+		}
+
+		dst = resize.Resize(uint(targetWidth), uint(targetHeight), originalImageData, resize.Lanczos3)
+	} else {
+		// typeCut
 		if targetWidth < 0 {
 			targetWidth = float64(targetHeight) * originalRatio
 		}

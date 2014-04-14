@@ -2,15 +2,15 @@
 	"allowedEntries" : [
 		{
 			"name" : "45x35", 
-			"width" : -1, 
+			"width" : 45, 
 			"height" : 35,
-			"type" : "resize"
+			"type" : "fit"
 		}, 
 		{
 			"name" : "294x300", 
 			"width" : 294, 
-			"height" : -1, 
-			"type" : "resize"
+			"height" : 300, 
+			"type" : "fit"
 		},
 		{
 			"name" : "294x210", 
@@ -45,20 +45,20 @@
 		{
 			"name" : "130x260", 
 			"width" : 130, 
-			"height" :  -1, 
-			"type" : "resize"
+			"height" : 260, 
+			"type" : "fit"
 		},
 		{
 			"name" : "310x230", 
 			"width" : 310, 
-			"height" : -1, 
-			"type" : "resize"
+			"height" : 230, 
+			"type" : "fit"
 		},
 		{
 			"name" : "302x302", 
 			"width" : 302, 
-			"height" : -1,
-			"type" : "resize"
+			"height" : 302,
+			"type" : "fit"
 		}
 	]
 }
