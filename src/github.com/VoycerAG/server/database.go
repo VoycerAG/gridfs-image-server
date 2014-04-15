@@ -16,9 +16,8 @@ func FindImageByParentFilename(filename string, entry *Entry, gridfs *mgo.GridFS
 	} else {
 		query = bson.M{
 			"metadata.originalFilename": filename,
-			"metadata.width":            entry.Width,
-			"metadata.resizeType":       entry.Type,
-			"metadata.height":           entry.Height}
+			"metadata.size":             fmt.Sprintf("%dx%d", entry.Width, entry.Height),
+			"metadata.resizeType":       entry.Type}
 	}
 
 	iter := gridfs.Find(query).Iter()

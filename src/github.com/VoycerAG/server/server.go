@@ -52,7 +52,7 @@ func addImageMetaData(targetImage *mgo.GridFile, imageData image.Image, imageFor
 		"original":         originalRef,
 		"originalFilename": originalImage.Name(),
 		"resizeType":       entry.Type,
-		"size":             fmt.Sprintf("%dx%d", width, height)}
+		"size":             fmt.Sprintf("%dx%d", entry.Width, entry.Height)}
 
 	targetImage.SetContentType(fmt.Sprintf("image/%s", imageFormat))
 	targetImage.SetMeta(metadata)
