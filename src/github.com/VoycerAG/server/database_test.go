@@ -32,6 +32,7 @@ func (s *DatabaseTestSuite) SetUpTest(c *C) {
 	metadata := bson.M{
 		"width":            100,
 		"height":           200,
+		"size":             "100x200",
 		"originalFilename": "original.jpg",
 		"resizeType":       "crop"}
 
