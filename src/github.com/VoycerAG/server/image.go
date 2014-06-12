@@ -1,8 +1,8 @@
 package server
 
 import (
-	"code.google.com/p/graphics-go/graphics"
 	"fmt"
+	"github.com/disintegration/imaging"
 	"github.com/nfnt/resize"
 	"image"
 	"image/gif"
@@ -134,9 +134,7 @@ func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry
 			targetHeight = float64(targetWidth) / originalRatio
 		}
 
-		imageRGBA := image.NewRGBA(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
-		err = graphics.Thumbnail(imageRGBA, originalImageData)
-		dst = imageRGBA.SubImage(image.Rect(0, 0, int(targetWidth), int(targetHeight)))
+		dst = imaging.Thumbnail(originalImageData, int(targetWidth), int(targetHeight), imaging.Lanczos)
 	}
 
 	return &dst, imageFormat, err

@@ -59,6 +59,12 @@
 			"width" : 302, 
 			"height" : 302,
 			"type" : "fit"
+		},
+		{
+			"name" : "150x150", 
+			"width" : 150, 
+			"height" : 150,
+			"type" : "crop"
 		}
 	]
 }
