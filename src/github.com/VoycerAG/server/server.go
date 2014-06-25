@@ -125,7 +125,14 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 	gridfs := Connection.DB(requestConfig.Database).GridFS("fs")
 
 	resizeEntry, _ := Configuration.GetEntryByName(requestConfig.FormatName)
-	foundImage, _ := FindImageByParentFilename(requestConfig.Filename, resizeEntry, gridfs)
+
+	var foundImage *mgo.GridFile
+
+	if bson.IsObjectIdHex(requestConfig.Filename) {
+		foundImage, _ = FindImageByParentId(requestConfig.Filename, resizeEntry, gridfs)
+	} else {
+		foundImage, _ = FindImageByParentFilename(requestConfig.Filename, resizeEntry, gridfs)
+	}
 
 	// case that we do not want resizing and did not find any image
 	if foundImage == nil && resizeEntry == nil {
@@ -152,7 +159,12 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 
 	if foundImage == nil && resizeEntry != nil {
 		// generate new image
-		foundImage, _ = FindImageByParentFilename(requestConfig.Filename, nil, gridfs)
+		if bson.IsObjectIdHex(requestConfig.Filename) {
+			fmt.Printf(requestConfig.Filename)
+			foundImage, _ = FindImageByParentId(requestConfig.Filename, nil, gridfs)
+		} else {
+			foundImage, _ = FindImageByParentFilename(requestConfig.Filename, nil, gridfs)
+		}
 
 		if foundImage == nil {
 			log.Printf("%d Could not find original image.\n", http.StatusNotFound)
