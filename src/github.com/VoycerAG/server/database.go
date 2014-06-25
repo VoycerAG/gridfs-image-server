@@ -36,7 +36,7 @@ func FindImageByParentId(id string, entry *Entry, gridfs *mgo.GridFS) (*mgo.Grid
 	var query bson.M
 
 	if entry == nil {
-		query = bson.M{"_id": id}
+		query = bson.M{"_id": bson.ObjectIdHex(id)}
 	} else {
 		query = bson.M{
 			"metadata.original.$id": bson.ObjectIdHex(id),
