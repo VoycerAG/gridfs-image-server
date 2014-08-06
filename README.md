@@ -8,9 +8,7 @@ This program is used in order to distribute gridfs files fast with nginx.
 Compilation:
 -----
 
-* In the projects root directory export GOPATH=\`pwd\`
-* run ./deps.sh to install depedencies
-* go install github.com/VoycerAG will install the binary in bin/VoycerAG
+* install project using go get github.com/VoycerAG/gridfs-image-server
 
 Instructions
 -----
@@ -30,7 +28,7 @@ See the configuration.json file for examples on how to configure entries for the
 
 Possible Problems
 -----
-Go 1.2 currently does not support reading of Interlaced PNG Files. Therefore, the Image Server
+Go 1.3 currently does not support reading of Interlaced PNG Files. Therefore, the Image Server
 uses ImageMagick in the Background for the conversion of this special format. 
 If your application uses Interlaced PNGs please install imagemagick ("covert x y") on the machine which uses the server.
 Otherwise these PNG files will not be converted and result in 404 errors. 
