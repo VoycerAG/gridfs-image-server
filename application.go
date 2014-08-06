@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/VoycerAG/server"
 	"log"
 	"os"
+
+	"github.com/VoycerAG/gridfs-image-server/server"
 )
 
 // main starts the server and returns an invalid result as exit code

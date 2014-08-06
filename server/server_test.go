@@ -1,16 +1,17 @@
 package server
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"image"
 	"image/jpeg"
-	"labix.org/v2/mgo"
-	. "launchpad.net/gocheck"
 	"net/http"
 	"os"
 	"time"
-	"crypto/md5"
-	"encoding/hex"
+
+	"gopkg.in/mgo.v2"
+	. "launchpad.net/gocheck"
 )
 
 type ServerTestSuite struct{}
@@ -105,10 +106,10 @@ func (s *ServerTestSuite) TestCacheHitSuccess(c *C) {
 type ResponseWriterMock struct {
 	HeaderData http.Header
 	HeaderCode int
-	Body []byte
+	Body       []byte
 }
 
-func NewResponseWriter(header http.Header, code int) (ResponseWriterMock) {
+func NewResponseWriter(header http.Header, code int) ResponseWriterMock {
 	mock := ResponseWriterMock{}
 	mock.HeaderData = header
 	mock.HeaderCode = code
@@ -156,9 +157,9 @@ func (s *ServerTestSuite) TestimageHandlerConfigurationNotFound(c *C) {
 	Configuration = nil
 
 	requestConfig := ServerConfiguration{
-		Database: "unittest",
+		Database:   "unittest",
 		FormatName: "jpg",
-		Filename: "test.jpg"}
+		Filename:   "test.jpg"}
 
 	header := http.Header{}
 	responseWriter := NewResponseWriter(header, -1)
@@ -170,16 +171,15 @@ func (s *ServerTestSuite) TestimageHandlerConfigurationNotFound(c *C) {
 	c.Assert(responseWriter.HeaderCode, Equals, 500)
 }
 
-
 func (s *ServerTestSuite) TestimageHandlerConnectionNotFound(c *C) {
 	config := Config{}
 	Configuration = &config
 	Connection = nil
 
 	requestConfig := ServerConfiguration{
-		Database: "unittest",
+		Database:   "unittest",
 		FormatName: "jpg",
-		Filename: "test.jpg"}
+		Filename:   "test.jpg"}
 
 	header := http.Header{}
 	responseWriter := NewResponseWriter(header, -1)
@@ -196,17 +196,17 @@ func (s *ServerTestSuite) TestimageHandlerImageNotFound(c *C) {
 
 	config := Config{}
 	config.AllowedEntries = append(config.AllowedEntries, Entry{
-			Name: "test",
-			Width: 100,
-			Height: 200,
-			Type: "crop"})
+		Name:   "test",
+		Width:  100,
+		Height: 200,
+		Type:   "crop"})
 
 	Configuration = &config
 
 	requestConfig := ServerConfiguration{
-		Database: "unittest",
+		Database:   "unittest",
 		FormatName: "test",
-		Filename: "notexisting.jpg"}
+		Filename:   "notexisting.jpg"}
 
 	header := http.Header{}
 	responseWriter := NewResponseWriter(header, -1)
@@ -223,17 +223,17 @@ func (s *ServerTestSuite) TestimageHandlerImageNotFoundWithoutResize(c *C) {
 
 	config := Config{}
 	config.AllowedEntries = append(config.AllowedEntries, Entry{
-			Name: "test",
-			Width: 100,
-			Height: 200,
-			Type: "crop"})
+		Name:   "test",
+		Width:  100,
+		Height: 200,
+		Type:   "crop"})
 
 	Configuration = &config
 
 	requestConfig := ServerConfiguration{
-		Database: "unittest",
+		Database:   "unittest",
 		FormatName: "notexisting",
-		Filename: "notexisting.jpg"}
+		Filename:   "notexisting.jpg"}
 
 	header := http.Header{}
 	responseWriter := NewResponseWriter(header, -1)
@@ -250,17 +250,17 @@ func (s *ServerTestSuite) TestimageHandlerImageCached(c *C) {
 
 	config := Config{}
 	config.AllowedEntries = append(config.AllowedEntries, Entry{
-			Name: "test",
-			Width: 100,
-			Height: 200,
-			Type: "crop"})
+		Name:   "test",
+		Width:  100,
+		Height: 200,
+		Type:   "crop"})
 
 	Configuration = &config
 
 	requestConfig := ServerConfiguration{
-		Database: "unittest",
+		Database:   "unittest",
 		FormatName: "",
-		Filename: "test.jpg"}
+		Filename:   "test.jpg"}
 
 	modified := time.Now().Format(time.RFC1123)
 
@@ -283,17 +283,17 @@ func (s *ServerTestSuite) TestimageHandlerNotCachedParent(c *C) {
 
 	config := Config{}
 	config.AllowedEntries = append(config.AllowedEntries, Entry{
-			Name: "test",
-			Width: 100,
-			Height: 200,
-			Type: "crop"})
+		Name:   "test",
+		Width:  100,
+		Height: 200,
+		Type:   "crop"})
 
 	Configuration = &config
 
 	requestConfig := ServerConfiguration{
-		Database: "unittest",
+		Database:   "unittest",
 		FormatName: "",
-		Filename: "test.jpg"}
+		Filename:   "test.jpg"}
 
 	header := http.Header{}
 	responseWriter := NewResponseWriter(header, -1)

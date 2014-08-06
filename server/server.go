@@ -3,22 +3,29 @@ package server
 import (
 	"flag"
 	"fmt"
-	"github.com/gorilla/context"
-	"github.com/gorilla/mux"
 	"image"
 	"io"
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
 	"log"
 	"net/http"
 	"runtime"
 	"time"
+
+	"github.com/gorilla/context"
+	"github.com/gorilla/mux"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
+//JpegMaximumQuality quality for jpeg compression
 const JpegMaximumQuality = 100
+
+//ImageCacheDuration caching time for images
 const ImageCacheDuration = 315360000
 
+//Connection is the mgo database connection
 var Connection *mgo.Session
+
+//Configuration is the images  configuration
 var Configuration *Config
 
 // VarsHandler is a simple wrapper so the request params can be injected into the main handler

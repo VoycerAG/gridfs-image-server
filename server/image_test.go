@@ -3,9 +3,10 @@ package server
 import (
 	"image"
 	"io"
-	"labix.org/v2/mgo"
-	. "launchpad.net/gocheck"
 	"os"
+
+	"gopkg.in/mgo.v2"
+	. "launchpad.net/gocheck"
 )
 
 type ImageTestSuite struct{}

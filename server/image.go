@@ -2,19 +2,20 @@ package server
 
 import (
 	"fmt"
-	"github.com/disintegration/imaging"
-	"github.com/nfnt/resize"
 	"image"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"io"
 	"io/ioutil"
-	"labix.org/v2/mgo"
 	"log"
 	"os"
 	"os/exec"
 	"syscall"
+
+	"github.com/disintegration/imaging"
+	"github.com/nfnt/resize"
+	"gopkg.in/mgo.v2"
 )
 
 // ResizeImageFromGridfs resizes an gridfs image stream

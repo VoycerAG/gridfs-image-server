@@ -2,8 +2,9 @@ package server
 
 import (
 	"fmt"
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
+
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // FindImageByParentFilename returns either the resized image that actually exists, or the original if entry is nil
