@@ -48,15 +48,3 @@ The configuration section for your media vhost could look something like this:
 
 Now images can be retrieved by calling /media/filename?size=entry
 
-Cross compilation
------
-For cross compilation see http://dave.cheney.net/2012/09/08/an-introduction-to-cross-compilation-with-go
-It should be enough to use the following commands:
-
-* cd ~
-* git clone git://github.com/davecheney/golang-crosscompile.git
-* source golang-crosscompile/crosscompile.bash
-* go-crosscompile-build-all
-
-After this setup you can use the build-linux.sh to compile the image server for x64 linux servers.
-
