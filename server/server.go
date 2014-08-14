@@ -257,6 +257,7 @@ func Deliver() int {
 	if *newrelicKey != "" {
 		agent := gorelic.NewAgent()
 		agent.NewrelicLicense = *newrelicKey
+		agent.NewrelicName = "Go image server"
 		agent.Run()
 	}
 
