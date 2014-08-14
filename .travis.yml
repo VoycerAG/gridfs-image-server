@@ -9,6 +9,7 @@ before_install:
 services: mongodb
 
 install:
+  - go get github.com/yvasiyarov/gorelic
   - go get launchpad.net/gocheck
   - go get gopkg.in/mgo.v2
   - go get github.com/disintegration/imaging

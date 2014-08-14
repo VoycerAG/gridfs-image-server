@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"github.com/yvasiyarov/gorelic"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -227,6 +228,7 @@ func Deliver() int {
 	configurationFilepath := flag.String("config", "configuration.json", "path to the configuration file")
 	serverPort := flag.Int("port", 8000, "the server port where we will serve images")
 	host := flag.String("host", "localhost:27017", "the database host with an optional port, localhost would suffice")
+	newrelicKey := flag.String("license", "", "your newrelic license key in order to enable monitoring")
 
 	flag.Parse()
 
@@ -250,6 +252,12 @@ func Deliver() int {
 	if err != nil {
 		log.Fatal("Cannot connect to database")
 		return -1
+	}
+
+	if *newrelicKey != "" {
+		agent := gorelic.NewAgent()
+		agent.NewrelicLicense = *newrelicKey
+		agent.Run()
 	}
 
 	Connection.SetMode(mgo.Eventual, true)
