@@ -1,0 +1,36 @@
+{
+	"ImportPath": "github.com/VoycerAG/gridfs-image-server",
+	"GoVersion": "go1.3",
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/go.image/bmp",
+			"Comment": "null-34",
+			"Rev": "e492ffa4cad4d945baf6c597b52a306618e6f80a"
+		},
+		{
+			"ImportPath": "code.google.com/p/go.image/tiff",
+			"Comment": "null-34",
+			"Rev": "e492ffa4cad4d945baf6c597b52a306618e6f80a"
+		},
+		{
+			"ImportPath": "github.com/disintegration/imaging",
+			"Rev": "9e67388aae65b9dc4e563beff827e19755deae6a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "14f550f51af52180c2eefed15e5fd18d63c0a64a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "14cafe28513321476c73967a5a4f3454b6129c46"
+		},
+		{
+			"ImportPath": "github.com/nfnt/resize",
+			"Rev": "ccddecd1bf0b15e36e2ffcfdef7c6832eaa0dbf6"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2",
+			"Rev": "dc255bb679efa273b6544a03261c4053505498a4"
+		}
+	]
+}
