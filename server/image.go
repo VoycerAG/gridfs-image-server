@@ -147,8 +147,7 @@ func EncodeImage(targetImage io.Writer, imageData image.Image, imageFormat strin
 	case "jpeg":
 		jpeg.Encode(targetImage, imageData, &jpeg.Options{jpeg.DefaultQuality})
 	case "png":
-	    var encoder = png.Encoder
-	    encoder.CompressionLevel = png.BestSpeed
+	    encoder := png.Encoder{CompressionLevel: png.BestSpeed}
 		encoder.Encode(targetImage, imageData)
 	case "gif":
 		gif.Encode(targetImage, imageData, &gif.Options{256, nil, nil})
