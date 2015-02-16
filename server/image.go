@@ -145,9 +145,10 @@ func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry
 func EncodeImage(targetImage io.Writer, imageData image.Image, imageFormat string) error {
 	switch imageFormat {
 	case "jpeg":
-		jpeg.Encode(targetImage, imageData, &jpeg.Options{JpegMaximumQuality})
+		jpeg.Encode(targetImage, imageData, &jpeg.Options{jpeg.DefaultQuality})
 	case "png":
-		png.Encode(targetImage, imageData)
+	    encoder := png.Encoder{CompressionLevel: png.BestSpeed}
+		encoder.Encode(targetImage, imageData)
 	case "gif":
 		gif.Encode(targetImage, imageData, &gif.Options{256, nil, nil})
 	default:
