@@ -189,7 +189,6 @@ func (s *ImageTestSuite) TestEncodeJpegImage(c *C) {
 
 // TestEncodePngImageInterlaced
 func (s *ImageTestSuite) TestEncodePngImageInterlaced(c *C) {
-	c.Skip("This test won't work as long as png does not support interlacing in go @see http://code.google.com/p/go/issues/detail?id=6293")
 	filename, _ := os.Getwd()
 	testPNG, err := os.Open(filename + "/../testdata/interlaced.png")
 	c.Assert(err, IsNil)
