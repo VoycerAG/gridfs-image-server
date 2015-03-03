@@ -25,10 +25,8 @@ func ResizeImageFromGridfs(originalImage *mgo.GridFile, entry *Entry) (*image.Im
 	if imgErr != nil {
 		// reset pointer and re read the gridfs image
 		originalImage.Seek(0, 0)
-		// now it gets really hacky, since go does not support interlaced pngs
-		// http://code.google.com/p/go/issues/detail?id=6293
-		// we will call imagemagick in order to remove interlacing, and save the image
-		// if this fails as well, there must be something wrong
+
+		//if resizing with go tools fails, a fallback is implemented to use convett
 		unresizedImage, magickError := imageMagickFallback(originalImage)
 
 		if magickError == nil {
@@ -147,7 +145,7 @@ func EncodeImage(targetImage io.Writer, imageData image.Image, imageFormat strin
 	case "jpeg":
 		jpeg.Encode(targetImage, imageData, &jpeg.Options{jpeg.DefaultQuality})
 	case "png":
-	    encoder := png.Encoder{CompressionLevel: png.BestCompression}
+		encoder := png.Encoder{CompressionLevel: png.BestCompression}
 		encoder.Encode(targetImage, imageData)
 	case "gif":
 		gif.Encode(targetImage, imageData, &gif.Options{256, nil, nil})
