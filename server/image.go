@@ -14,7 +14,6 @@ import (
 	"syscall"
 
 	"github.com/disintegration/imaging"
-	"github.com/nfnt/resize"
 	"gopkg.in/mgo.v2"
 )
 
@@ -108,7 +107,7 @@ func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry
 			targetHeight = 0
 		}
 
-		dst = resize.Resize(uint(targetWidth), uint(targetHeight), originalImageData, resize.Lanczos3)
+		dst = imaging.Resize(originalImageData, int(targetWidth), int(targetHeight), imaging.Lanczos)
 	} else if entry.Type == TypeFit {
 		if targetWidth < 0 || targetHeight < 0 {
 			return nil, "", fmt.Errorf("When using type fit, both height and width must be specified")
@@ -122,7 +121,7 @@ func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry
 			targetWidth = targetHeight * originalRatio
 		}
 
-		dst = resize.Resize(uint(targetWidth), uint(targetHeight), originalImageData, resize.Lanczos3)
+		dst = imaging.Resize(originalImageData, int(targetWidth), int(targetHeight), imaging.Lanczos)
 	} else {
 		// typeCut
 		if targetWidth < 0 {

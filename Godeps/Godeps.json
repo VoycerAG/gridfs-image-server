@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/VoycerAG/gridfs-image-server",
-	"GoVersion": "go1.4",
+	"GoVersion": "go1.4.2",
 	"Deps": [
 		{
 			"ImportPath": "code.google.com/p/go.image/bmp",
@@ -25,8 +25,17 @@
 			"Rev": "14cafe28513321476c73967a5a4f3454b6129c46"
 		},
 		{
-			"ImportPath": "github.com/nfnt/resize",
-			"Rev": "ccddecd1bf0b15e36e2ffcfdef7c6832eaa0dbf6"
+			"ImportPath": "github.com/yvasiyarov/go-metrics",
+			"Rev": "c25f46c4b94079672242ec48a545e7ca9ebe3aec"
+		},
+		{
+			"ImportPath": "github.com/yvasiyarov/gorelic",
+			"Comment": "v0.0.6-22-g9fe479b",
+			"Rev": "9fe479b46261664fba456a6aacdc31933b94cfd1"
+		},
+		{
+			"ImportPath": "github.com/yvasiyarov/newrelic_platform_go",
+			"Rev": "cef0ebd22fb48453114ba645d0fb80fea6e670de"
 		},
 		{
 			"ImportPath": "gopkg.in/mgo.v2",

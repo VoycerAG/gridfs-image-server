@@ -99,7 +99,7 @@ func (s *ImageTestSuite) TestValidEntryTypeResizeAndFormatForwardingWidthMissing
 
 	c.Assert(imageFormat, Equals, "i do not care")
 	c.Assert(imageError, IsNil)
-	c.Assert((*imageData).Bounds().Dx(), Equals, 534)
+	c.Assert((*imageData).Bounds().Dx(), Equals, 533)
 	c.Assert((*imageData).Bounds().Dy(), Equals, 400)
 }
 
