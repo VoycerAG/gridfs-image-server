@@ -62,6 +62,18 @@ func addImageMetaData(targetImage *mgo.GridFile, imageData image.Image, imageFor
 		"resizeType":       entry.Type,
 		"size":             fmt.Sprintf("%dx%d", entry.Width, entry.Height)}
 
+	originalMetadata := bson.M{}
+
+	if err := originalImage.GetMeta(&originalMetadata); err != nil {
+		log.Println("Original image data not found.")
+	} else {
+		for k, v := range originalMetadata {
+			if _, exists := metadata[k]; !exists {
+				metadata[k] = v
+			}
+		}
+	}
+
 	targetImage.SetContentType(fmt.Sprintf("image/%s", imageFormat))
 	targetImage.SetMeta(metadata)
 }
