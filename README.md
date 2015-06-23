@@ -26,13 +26,6 @@ Image Server Configuration
 
 See the configuration.json file for examples on how to configure entries for the image server.
 
-Possible Problems
------
-Go 1.3 currently does not support reading of Interlaced PNG Files. Therefore, the Image Server
-uses ImageMagick in the Background for the conversion of this special format. 
-If your application uses Interlaced PNGs please install imagemagick ("covert x y") on the machine which uses the server.
-Otherwise these PNG files will not be converted and result in 404 errors. 
-
 Nginx Configuration
 -----
 
