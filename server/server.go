@@ -266,11 +266,15 @@ func Deliver() int {
 		return -1
 	}
 
+	var wrapperFunc func(http.Handler) http.Handler
+
 	if *newrelicKey != "" {
 		agent := gorelic.NewAgent()
 		agent.NewrelicLicense = *newrelicKey
 		agent.NewrelicName = "Go image server"
+		agent.CollectHTTPStat = true
 		agent.Run()
+		wrapperFunc = agent.WrapHTTPHandler
 	}
 
 	Connection.SetMode(mgo.Eventual, true)
@@ -278,7 +282,12 @@ func Deliver() int {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", welcomeHandler)
-	r.Handle(serverRoute, VarsHandler(imageHandler))
+
+	if wrapperFunc != nil {
+		r.Handle(serverRoute, wrapperFunc(VarsHandler(imageHandler)))
+	} else {
+		r.Handle(serverRoute, VarsHandler(imageHandler))
+	}
 
 	http.Handle("/", r)
 

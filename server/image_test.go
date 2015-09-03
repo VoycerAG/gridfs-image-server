@@ -383,7 +383,7 @@ func (s *ImageTestSuite) TestResizeJpegImageFromGridFsCMYK(c *C) {
 	c.Assert(err, IsNil)
 
 	_, _, errResult := ResizeImageFromGridfs(testMongoPNG, &entry)
-	c.Assert(errResult, ErrorMatches, "unsupported JPEG feature: SOF has wrong length")
+	c.Assert(errResult, Equals, nil)
 }
 
 //TestFallbackToImageMagick

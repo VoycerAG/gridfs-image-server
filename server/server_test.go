@@ -44,7 +44,7 @@ func (s *ServerTestSuite) SetUpTest(c *C) {
 
 	c.Assert(openErr, IsNil)
 
-	c.Assert(testMongoFile.MD5(), Equals, "d5b390993a34a440891a6f20407f9dde")
+	c.Assert(testMongoFile.MD5(), Equals, "4838427937843516d983b30dce94fd43")
 }
 
 // TearDownTest removes the created test file.
@@ -269,7 +269,7 @@ func (s *ServerTestSuite) TestimageHandlerImageCached(c *C) {
 	responseWriter := NewResponseWriter(header, -1)
 
 	r, _ := http.NewRequest("GET", "test-url", nil)
-	r.Header.Set("If-None-Match", "d5b390993a34a440891a6f20407f9dde")
+	r.Header.Set("If-None-Match", "4838427937843516d983b30dce94fd43")
 	r.Header.Set("Cache-Control", fmt.Sprintf("max-age=%d", 1000))
 	r.Header.Set("If-Modified-Since", modified)
 
@@ -305,10 +305,10 @@ func (s *ServerTestSuite) TestimageHandlerNotCachedParent(c *C) {
 	// The default value of the responseWriterMock is -1
 	c.Assert(responseWriter.HeaderCode, Equals, -1)
 
-	c.Assert(responseWriter.Header().Get("Etag"), Equals, "d5b390993a34a440891a6f20407f9dde")
+	c.Assert(responseWriter.Header().Get("Etag"), Equals, "4838427937843516d983b30dce94fd43")
 
 	hexMd5 := md5.Sum(responseWriter.Body)
 	md5String := hex.EncodeToString(hexMd5[:16])
 
-	c.Assert(md5String, Equals, "d5b390993a34a440891a6f20407f9dde")
+	c.Assert(md5String, Equals, "4838427937843516d983b30dce94fd43")
 }
