@@ -42,7 +42,6 @@ func (s *DatabaseTestSuite) SetUpTest(c *C) {
 	// set a jpeg image to gridfs
 	defer testJpeg.Close()
 	io.Copy(childFile, testJpeg)
-
 	childFile.Close()
 
 }
