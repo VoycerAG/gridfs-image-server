@@ -1,17 +1,10 @@
 {
 	"ImportPath": "github.com/VoycerAG/gridfs-image-server",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.5.1",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
-		{
-			"ImportPath": "code.google.com/p/go.image/bmp",
-			"Comment": "null-34",
-			"Rev": "e492ffa4cad4d945baf6c597b52a306618e6f80a"
-		},
-		{
-			"ImportPath": "code.google.com/p/go.image/tiff",
-			"Comment": "null-34",
-			"Rev": "e492ffa4cad4d945baf6c597b52a306618e6f80a"
-		},
 		{
 			"ImportPath": "github.com/disintegration/imaging",
 			"Rev": "9e67388aae65b9dc4e563beff827e19755deae6a"
@@ -38,8 +31,21 @@
 			"Rev": "cef0ebd22fb48453114ba645d0fb80fea6e670de"
 		},
 		{
+			"ImportPath": "golang.org/x/image/bmp",
+			"Rev": "8e3389fa81abf8e318abefa17054df807e5c5692"
+		},
+		{
+			"ImportPath": "golang.org/x/image/tiff",
+			"Rev": "8e3389fa81abf8e318abefa17054df807e5c5692"
+		},
+		{
 			"ImportPath": "gopkg.in/mgo.v2",
 			"Rev": "dc255bb679efa273b6544a03261c4053505498a4"
+		},
+		{
+			"ImportPath": "launchpad.net/gocheck",
+			"Comment": "87",
+			"Rev": "gustavo@niemeyer.net-20140225173054-xu9zlkf9kxhvow02"
 		}
 	]
 }
