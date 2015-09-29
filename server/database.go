@@ -31,8 +31,8 @@ func FindImageByParentFilename(filename string, entry *Entry, gridfs *mgo.GridFS
 	return fp, nil
 }
 
-// FindImageByParentId returns works exactly like FindImageByParentFilename but with the id instead of filename
-func FindImageByParentId(id string, entry *Entry, gridfs *mgo.GridFS) (*mgo.GridFile, error) {
+// FindImageByParentID returns works exactly like FindImageByParentFilename but with the id instead of filename
+func FindImageByParentID(id string, entry *Entry, gridfs *mgo.GridFS) (*mgo.GridFile, error) {
 	var fp *mgo.GridFile
 	var query bson.M
 

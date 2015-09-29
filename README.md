@@ -41,3 +41,12 @@ The configuration section for your media vhost could look something like this:
 
 Now images can be retrieved by calling /media/filename?size=entry
 
+## Changelog
+
+Changes in Version 3:
+
+- If neither the original file, nor the resize file could be found, instead of StatusCode 400
+the server will now respond with a StatusCode 404.
+
+- A bug that made initial resized image do not sent cache headers is fixed.
+

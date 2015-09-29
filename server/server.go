@@ -1,13 +1,11 @@
 package server
 
 import (
-	"flag"
 	"fmt"
 	"image"
 	"io"
 	"log"
 	"net/http"
-	"runtime"
 	"time"
 
 	"github.com/gorilla/context"
@@ -17,35 +15,76 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-//JpegMaximumQuality quality for jpeg compression
-const JpegMaximumQuality = 100
+const (
+	//JpegMaximumQuality quality for jpeg compression
+	JpegMaximumQuality = 100
 
-//ImageCacheDuration caching time for images
-const ImageCacheDuration = 315360000
+	//ImageCacheDuration caching time for images
+	ImageCacheDuration = 315360000
+)
 
-//Connection is the mgo database connection
-var Connection *mgo.Session
+type imageServer struct {
+	connection         *mgo.Session
+	imageConfiguration *Config
+	handlerMux         http.Handler
+}
 
-//Configuration is the images  configuration
-var Configuration *Config
+//Server interface for our server
+type Server interface {
+	Handler() http.Handler
+}
 
-// VarsHandler is a simple wrapper so the request params can be injected into the main handler
-type VarsHandler func(http.ResponseWriter, *http.Request, *ServerConfiguration)
+//NewImageServer returns a new image server
+func NewImageServer(config *Config, db *mgo.Session) Server {
+	return NewImageServerWithNewRelic(config, db, "")
+}
 
-// ServeHTTP wraps the imageHandler function and validates request parameters
-// in order to create a ServerConfiguration object
-func (h VarsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+//NewImageServerWithNewRelic will return an image server with newrelic monitoring
+//licenseKey must be your newrelic license key
+func NewImageServerWithNewRelic(config *Config, db *mgo.Session, licenseKey string) Server {
+	var handler http.Handler
+	// in order to simple configure the image server in the proxy configuration of nginx
+	// we will be getting every database variable from the request
+	serverRoute := "/{database}/{filename}"
 
-	requestConfig, validateError := CreateConfigurationFromVars(r, vars)
+	r := mux.NewRouter()
+	r.HandleFunc("/", welcomeHandler)
+	//TODO refactor depedency mess
+	r.Handle(serverRoute, func(y *mgo.Session, z *Config) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			vars := mux.Vars(r)
 
-	if validateError != nil {
-		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
-		w.WriteHeader(http.StatusNotFound)
-		return
+			requestConfig, validateError := CreateConfigurationFromVars(r, vars)
+
+			if validateError != nil {
+				log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			imageHandler(w, r, requestConfig, y, z)
+		}
+	}(db, config))
+	http.Handle("/", r)
+
+	handler = http.DefaultServeMux
+
+	if licenseKey != "" {
+		agent := gorelic.NewAgent()
+		agent.NewrelicLicense = licenseKey
+		agent.NewrelicName = "Go image server"
+		agent.CollectHTTPStat = true
+		agent.Run()
+		handler = agent.WrapHTTPHandler(handler)
 	}
 
-	h(w, r, requestConfig)
+	handlerMux := context.ClearHandler(handler)
+	return &imageServer{imageConfiguration: config, handlerMux: handlerMux}
+}
+
+//Handler is the startup method that parses configuration files and opens the mongo connection
+func (i imageServer) Handler() http.Handler {
+	return i.handlerMux
 }
 
 // addImageMetaData adds data to the image the image
@@ -123,41 +162,39 @@ func setCacheHeaders(file *mgo.GridFile, w http.ResponseWriter) {
 }
 
 // imageHandler the main handler
-func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerConfiguration) {
+func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configuration, connection *mgo.Session, imageConfig *Config) {
 	log.Printf("Request on %s", r.URL)
 
-	defer func() {
-		runtime.GC()
-	}()
-
-	if Connection == nil {
+	if connection == nil {
 		log.Printf("Connection is not set.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if Configuration == nil {
-		log.Printf("Configuration object is not set.")
+	if imageConfig == nil {
+		log.Printf("imageConfiguration object is not set.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	gridfs := Connection.DB(requestConfig.Database).GridFS("fs")
+	gridfs := connection.DB(requestConfig.Database).GridFS("fs")
 
-	resizeEntry, _ := Configuration.GetEntryByName(requestConfig.FormatName)
+	resizeEntry, _ := imageConfig.GetEntryByName(requestConfig.FormatName)
 
 	var foundImage *mgo.GridFile
 
 	if bson.IsObjectIdHex(requestConfig.Filename) {
-		foundImage, _ = FindImageByParentId(requestConfig.Filename, resizeEntry, gridfs)
+		foundImage, _ = FindImageByParentID(requestConfig.Filename, resizeEntry, gridfs)
 	} else {
+		//FindImageByParentFilename will not look for parent filename if
+		//entry is not given rofl
 		foundImage, _ = FindImageByParentFilename(requestConfig.Filename, resizeEntry, gridfs)
 	}
 
 	// case that we do not want resizing and did not find any image
 	if foundImage == nil && resizeEntry == nil {
-		log.Printf("%d invalid request parameters given.\n", http.StatusNotFound)
-		w.WriteHeader(http.StatusBadRequest)
+		log.Printf("%d file not found.\n", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -180,8 +217,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 	if foundImage == nil && resizeEntry != nil {
 		// generate new image
 		if bson.IsObjectIdHex(requestConfig.Filename) {
-			fmt.Printf(requestConfig.Filename)
-			foundImage, _ = FindImageByParentId(requestConfig.Filename, nil, gridfs)
+			foundImage, _ = FindImageByParentID(requestConfig.Filename, nil, gridfs)
 		} else {
 			foundImage, _ = FindImageByParentFilename(requestConfig.Filename, nil, gridfs)
 		}
@@ -225,80 +261,13 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *ServerC
 
 		addImageMetaData(targetfile, *resizedImage, imageFormat, foundImage, resizeEntry)
 
-		defer targetfile.Close()
+		targetfile.Close()
 
 		setCacheHeaders(targetfile, w)
-
 		EncodeImage(w, *resizedImage, imageFormat)
-		targetfile.Close()
+
 		log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
 	}
-}
-
-//Deliver is the startup method that parses configuration files and opens the mongo connection
-func Deliver() int {
-	configurationFilepath := flag.String("config", "configuration.json", "path to the configuration file")
-	serverPort := flag.Int("port", 8000, "the server port where we will serve images")
-	host := flag.String("host", "localhost:27017", "the database host with an optional port, localhost would suffice")
-	newrelicKey := flag.String("license", "", "your newrelic license key in order to enable monitoring")
-
-	flag.Parse()
-
-	var err error
-
-	Configuration, err = CreateConfigFromFile(*configurationFilepath)
-
-	if err != nil {
-		fmt.Printf("Error %s\n", err)
-		return -2
-	}
-
-	fmt.Printf("Server started. Listening on %d database host is %s\n", *serverPort, *host)
-
-	// in order to simple configure the image server in the proxy configuration of nginx
-	// we will be getting every database variable from the request
-	serverRoute := "/{database}/{filename}"
-
-	Connection, err = mgo.Dial(*host)
-
-	if err != nil {
-		log.Fatal("Cannot connect to database")
-		return -1
-	}
-
-	var wrapperFunc func(http.Handler) http.Handler
-
-	if *newrelicKey != "" {
-		agent := gorelic.NewAgent()
-		agent.NewrelicLicense = *newrelicKey
-		agent.NewrelicName = "Go image server"
-		agent.CollectHTTPStat = true
-		agent.Run()
-		wrapperFunc = agent.WrapHTTPHandler
-	}
-
-	Connection.SetMode(mgo.Eventual, true)
-	Connection.SetSyncTimeout(0)
-
-	r := mux.NewRouter()
-	r.HandleFunc("/", welcomeHandler)
-
-	if wrapperFunc != nil {
-		r.Handle(serverRoute, wrapperFunc(VarsHandler(imageHandler)))
-	} else {
-		r.Handle(serverRoute, VarsHandler(imageHandler))
-	}
-
-	http.Handle("/", r)
-
-	err = http.ListenAndServe(fmt.Sprintf(":%d", *serverPort), context.ClearHandler(http.DefaultServeMux))
-
-	if err != nil {
-		log.Fatal(err)
-		return -1
-	}
-
-	return 0
 }
 
 // just a static welcome handler

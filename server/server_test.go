@@ -1,314 +1,162 @@
-package server
+package server_test
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"fmt"
-	"image"
-	"image/jpeg"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
-	"time"
 
 	"gopkg.in/mgo.v2"
-	. "launchpad.net/gocheck"
+
+	. "github.com/VoycerAG/gridfs-image-server/server"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-type ServerTestSuite struct{}
+const (
+	testConfig = `
+{
+	"allowedEntries" : [
+		{
+			"name" : "45x35",
+			"width" : 45,
+			"height" : 35,
+			"type" : "resize"
+		},
+		{
+			"name" : "50x40",
+			"width" : 50,
+			"height" : 40,
+			"type" : "crop"
+		},
+		{
+			"name" : "50x50",
+			"width" : 50,
+			"height" : 50,
+			"type" : "crop"
+		},
+		{
+			"name" : "130x260",
+			"width" : 130,
+			"height" : 260,
+			"type" : "fit"
+		},
+		{
+			"name" : "302x302",
+			"width" : 302,
+			"height" : 302,
+			"type" : "fit"
+		}
+	]
+}		
+	`
+)
 
-var _ = Suite(&ServerTestSuite{})
+var _ = Describe("Server", func() {
+	loadFixtureFile := func(source, target string, gridfs *mgo.GridFS) error {
+		fp, err := os.Open(source)
+		if err != nil {
+			return err
+		}
 
-var testMongoFile *mgo.GridFile
-var TestCon *mgo.Session
+		gf, err := gridfs.Create(target)
+		if err != nil {
+			return err
+		}
 
-// SetUpTest creates files for further tests to use
-func (s *ServerTestSuite) SetUpTest(c *C) {
-	filename, _ := os.Getwd()
-	imageFile, err := os.Open(filename + "/../testdata/image.jpg")
-	c.Assert(err, IsNil)
-	TestCon, err = mgo.Dial("localhost")
-	c.Assert(err, IsNil)
-	TestCon.SetMode(mgo.Monotonic, true)
+		defer gf.Close()
+		_, err = io.Copy(gf, fp)
 
-	tempMongo, mongoErr := TestCon.DB("unittest").GridFS("fs").Create("test.jpg")
-	c.Assert(mongoErr, IsNil)
-
-	dIm, _, _ := image.Decode(imageFile)
-
-	jpeg.Encode(tempMongo, dIm, &jpeg.Options{JpegMaximumQuality})
-	tempMongo.Close()
-
-	var openErr error
-
-	testMongoFile, openErr = TestCon.DB("unittest").GridFS("fs").Open("test.jpg")
-
-	c.Assert(openErr, IsNil)
-
-	c.Assert(testMongoFile.MD5(), Equals, "4838427937843516d983b30dce94fd43")
-}
-
-// TearDownTest removes the created test file.
-func (s *ServerTestSuite) TearDownTest(c *C) {
-	TestCon, _ = mgo.Dial("localhost")
-
-	if Connection != nil {
-		Connection.DB("unittest").DropDatabase()
+		return err
 	}
-}
 
-// TestIsModifiedNoCache
-func (s *ServerTestSuite) TestIsModifiedNoHeaders(c *C) {
-	header := http.Header{}
-
-	c.Assert(isModified(testMongoFile, &header), Equals, true)
-}
-
-// TestIsModifiedNoCache
-func (s *ServerTestSuite) TestIsModifiedNoCache(c *C) {
-
-	header := http.Header{}
-	header.Set("Cache-Control", "no-cache")
-
-	c.Assert(isModified(testMongoFile, &header), Equals, true)
-}
-
-// TestIsModifiedMd5Mismatch
-func (s *ServerTestSuite) TestIsModifiedMd5Mismatch(c *C) {
-
-	header := http.Header{}
-	header.Set("If-None-Match", "invalid md5")
-
-	c.Assert(isModified(testMongoFile, &header), Equals, true)
-}
-
-// TestCacheToOldHeader
-func (s *ServerTestSuite) TestCacheToOldHeader(c *C) {
-	modified := time.Unix(0, 0).Format(time.RFC1123)
-
-	header := http.Header{}
-	header.Set("If-None-Match", testMongoFile.MD5())
-	header.Set("If-Modified-Since", modified)
-
-	c.Assert(isModified(testMongoFile, &header), Equals, true)
-}
-
-// TestCacheHitSuccess
-func (s *ServerTestSuite) TestCacheHitSuccess(c *C) {
-	modified := time.Now().Format(time.RFC1123)
-
-	header := http.Header{}
-	header.Set("If-None-Match", testMongoFile.MD5())
-	header.Set("If-Modified-Since", modified)
-
-	c.Assert(isModified(testMongoFile, &header), Equals, false)
-}
-
-type ResponseWriterMock struct {
-	HeaderData http.Header
-	HeaderCode int
-	Body       []byte
-}
-
-func NewResponseWriter(header http.Header, code int) ResponseWriterMock {
-	mock := ResponseWriterMock{}
-	mock.HeaderData = header
-	mock.HeaderCode = code
-
-	return mock
-}
-
-func (t *ResponseWriterMock) Header() http.Header {
-	return t.HeaderData
-}
-
-func (t *ResponseWriterMock) Write(b []byte) (int, error) {
-	t.Body = b
-	return -1, fmt.Errorf("not implemented")
-}
-
-func (t *ResponseWriterMock) WriteHeader(code int) {
-	t.HeaderCode = code
-}
-
-// TestSetCacheHeaders uses a mocked response writer in order to get header values from method
-func (s *ServerTestSuite) TestSetCacheHeaders(c *C) {
-	header := http.Header{}
-	responseWriter := NewResponseWriter(header, -1)
-
-	d, _ := time.ParseDuration(fmt.Sprintf("%ds", ImageCacheDuration))
-
-	expires := testMongoFile.UploadDate().Add(d)
-
-	setCacheHeaders(testMongoFile, &responseWriter)
-
-	expectedLastModified := testMongoFile.UploadDate().Format(time.RFC1123)
-	expectedExpiryDate := expires.Format(time.RFC1123)
-	expectedDate := expectedLastModified
-
-	c.Assert(testMongoFile.MD5(), Equals, header.Get("Etag"))
-	c.Assert(fmt.Sprintf("max-age=%d", ImageCacheDuration), Equals, header.Get("Cache-Control"))
-	c.Assert(expectedLastModified, Equals, header.Get("Last-Modified"))
-	c.Assert(expectedExpiryDate, Equals, header.Get("Expires"))
-	c.Assert(expectedDate, Equals, header.Get("Date"))
-}
-
-func (s *ServerTestSuite) TestimageHandlerConfigurationNotFound(c *C) {
-	Connection, _ = mgo.Dial("localhost")
-	Configuration = nil
-
-	requestConfig := ServerConfiguration{
-		Database:   "unittest",
-		FormatName: "jpg",
-		Filename:   "test.jpg"}
-
-	header := http.Header{}
-	responseWriter := NewResponseWriter(header, -1)
-
-	r, _ := http.NewRequest("GET", "test-url", nil)
-
-	imageHandler(&responseWriter, r, &requestConfig)
-
-	c.Assert(responseWriter.HeaderCode, Equals, 500)
-}
-
-func (s *ServerTestSuite) TestimageHandlerConnectionNotFound(c *C) {
-	config := Config{}
-	Configuration = &config
-	Connection = nil
-
-	requestConfig := ServerConfiguration{
-		Database:   "unittest",
-		FormatName: "jpg",
-		Filename:   "test.jpg"}
-
-	header := http.Header{}
-	responseWriter := NewResponseWriter(header, -1)
-
-	r, _ := http.NewRequest("GET", "test-url", nil)
-
-	imageHandler(&responseWriter, r, &requestConfig)
-
-	c.Assert(responseWriter.HeaderCode, Equals, 500)
-}
-
-func (s *ServerTestSuite) TestimageHandlerImageNotFound(c *C) {
-	Connection, _ = mgo.Dial("localhost")
-
-	config := Config{}
-	config.AllowedEntries = append(config.AllowedEntries, Entry{
-		Name:   "test",
-		Width:  100,
-		Height: 200,
-		Type:   "crop"})
-
-	Configuration = &config
-
-	requestConfig := ServerConfiguration{
-		Database:   "unittest",
-		FormatName: "test",
-		Filename:   "notexisting.jpg"}
-
-	header := http.Header{}
-	responseWriter := NewResponseWriter(header, -1)
-
-	r, _ := http.NewRequest("GET", "test-url", nil)
-
-	imageHandler(&responseWriter, r, &requestConfig)
-
-	c.Assert(responseWriter.HeaderCode, Equals, 404)
-}
-
-func (s *ServerTestSuite) TestimageHandlerImageNotFoundWithoutResize(c *C) {
-	Connection, _ = mgo.Dial("localhost")
-
-	config := Config{}
-	config.AllowedEntries = append(config.AllowedEntries, Entry{
-		Name:   "test",
-		Width:  100,
-		Height: 200,
-		Type:   "crop"})
-
-	Configuration = &config
-
-	requestConfig := ServerConfiguration{
-		Database:   "unittest",
-		FormatName: "notexisting",
-		Filename:   "notexisting.jpg"}
-
-	header := http.Header{}
-	responseWriter := NewResponseWriter(header, -1)
-
-	r, _ := http.NewRequest("GET", "test-url", nil)
-
-	imageHandler(&responseWriter, r, &requestConfig)
-
-	c.Assert(responseWriter.HeaderCode, Equals, 400)
-}
-
-func (s *ServerTestSuite) TestimageHandlerImageCached(c *C) {
-	Connection, _ = mgo.Dial("localhost")
-
-	config := Config{}
-	config.AllowedEntries = append(config.AllowedEntries, Entry{
-		Name:   "test",
-		Width:  100,
-		Height: 200,
-		Type:   "crop"})
-
-	Configuration = &config
-
-	requestConfig := ServerConfiguration{
-		Database:   "unittest",
-		FormatName: "",
-		Filename:   "test.jpg"}
-
-	modified := time.Now().Format(time.RFC1123)
-
-	header := http.Header{}
-
-	responseWriter := NewResponseWriter(header, -1)
-
-	r, _ := http.NewRequest("GET", "test-url", nil)
-	r.Header.Set("If-None-Match", "4838427937843516d983b30dce94fd43")
-	r.Header.Set("Cache-Control", fmt.Sprintf("max-age=%d", 1000))
-	r.Header.Set("If-Modified-Since", modified)
-
-	imageHandler(&responseWriter, r, &requestConfig)
-
-	c.Assert(responseWriter.HeaderCode, Equals, 304)
-}
-
-func (s *ServerTestSuite) TestimageHandlerNotCachedParent(c *C) {
-	Connection, _ = mgo.Dial("localhost")
-
-	config := Config{}
-	config.AllowedEntries = append(config.AllowedEntries, Entry{
-		Name:   "test",
-		Width:  100,
-		Height: 200,
-		Type:   "crop"})
-
-	Configuration = &config
-
-	requestConfig := ServerConfiguration{
-		Database:   "unittest",
-		FormatName: "",
-		Filename:   "test.jpg"}
-
-	header := http.Header{}
-	responseWriter := NewResponseWriter(header, -1)
-
-	r, _ := http.NewRequest("GET", "test-url", nil)
-
-	imageHandler(&responseWriter, r, &requestConfig)
-
-	// The default value of the responseWriterMock is -1
-	c.Assert(responseWriter.HeaderCode, Equals, -1)
-
-	c.Assert(responseWriter.Header().Get("Etag"), Equals, "4838427937843516d983b30dce94fd43")
-
-	hexMd5 := md5.Sum(responseWriter.Body)
-	md5String := hex.EncodeToString(hexMd5[:16])
-
-	c.Assert(md5String, Equals, "4838427937843516d983b30dce94fd43")
-}
+	Context("Test basic responses", func() {
+		var (
+			rec          *httptest.ResponseRecorder
+			config       *Config
+			imageServer  Server
+			connection   *mgo.Session
+			database     *mgo.Database
+			databaseName string
+			gridfs       *mgo.GridFS
+		)
+
+		BeforeSuite(func() {
+			var err error
+			databaseName = "testdb"
+			config, err = NewConfigFromBytes([]byte(testConfig))
+			Expect(err).ToNot(HaveOccurred())
+			connection, err = mgo.Dial("localhost:27017")
+			connection.SetMode(mgo.Monotonic, true)
+			Expect(err).ToNot(HaveOccurred())
+			imageServer = NewImageServer(config, connection)
+			database = connection.DB(databaseName)
+			Expect(database).ToNot(BeNil())
+			gridfs = database.GridFS("fs")
+		})
+
+		BeforeEach(func() {
+			rec = httptest.NewRecorder()
+		})
+
+		It("Should response with welcome on /", func() {
+			req, err := http.NewRequest("GET", "/", nil)
+			Expect(err).ToNot(HaveOccurred())
+			handler := imageServer.Handler()
+			handler.ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(ContainSubstring("Image Server."))
+		})
+
+		It("will response with 404 if image not found", func() {
+			req, err := http.NewRequest("GET", "/invalid_testdatbase/notfound.jpg", nil)
+			Expect(err).ToNot(HaveOccurred())
+			handler := imageServer.Handler()
+			handler.ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusNotFound))
+		})
+
+		It("will deliver the original image without filter", func() {
+			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs)
+			Expect(err).ToNot(HaveOccurred())
+			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg", nil)
+			Expect(err).ToNot(HaveOccurred())
+			handler := imageServer.Handler()
+			handler.ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(len(rec.Body.Bytes())).To(BeNumerically(">", 0))
+			Expect(rec.Header().Get("Etag")).ToNot(Equal(""))
+		})
+
+		It("will deliver the resized image with filter", func() {
+			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs)
+			Expect(err).ToNot(HaveOccurred())
+			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg?size=45x35", nil)
+			Expect(err).ToNot(HaveOccurred())
+			handler := imageServer.Handler()
+			handler.ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(len(rec.Body.Bytes())).To(BeNumerically(">", 0))
+			Expect(rec.Header().Get("Etag")).ToNot(Equal(""))
+		})
+
+		It("will respond only with not modified if correct if none match got sent", func() {
+			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs)
+			Expect(err).ToNot(HaveOccurred())
+			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg", nil)
+			Expect(err).ToNot(HaveOccurred())
+			file, err := gridfs.Open("test.jpg")
+			Expect(err).ToNot(HaveOccurred())
+			req.Header.Set("If-None-Match", file.MD5())
+			handler := imageServer.Handler()
+			handler.ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusNotModified))
+			Expect(len(rec.Body.Bytes())).To(Equal(0))
+		})
+
+		AfterSuite(func() {
+			database.DropDatabase()
+		})
+	})
+})

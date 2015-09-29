@@ -6,19 +6,22 @@ import (
 	"io/ioutil"
 )
 
+// Config contains entries for
+// possible image configurations
 type Config struct {
 	AllowedEntries []Entry `json:allowedEntries`
 }
 
 const (
-	// resize will either force the given sizes, or resize via original ratio when either height or width is not specified
+	// TypeResize will either force the given sizes, or resize via original ratio when either height or width is not specified
 	TypeResize = "resize"
-	// crop will generate an image with exact sizes, but only a part of the image is visible
+	// TypeCrop will generate an image with exact sizes, but only a part of the image is visible
 	TypeCrop = "crop"
-	// fit will resize the image according to the original ratio, but will not exceed the given bounds
+	//TypeFit will resize the image according to the original ratio, but will not exceed the given bounds
 	TypeFit = "fit"
 )
 
+// Entry is one allowed image configuration
 type Entry struct {
 	Name   string `json:name`
 	Width  int64  `json:width`
@@ -26,21 +29,28 @@ type Entry struct {
 	Type   string `json:type`
 }
 
-// CreateConfigFromFile returns an Config object from a given file.
-func CreateConfigFromFile(file string) (*Config, error) {
+//NewConfigFromBytes generates a new config object by a byte stream
+func NewConfigFromBytes(b []byte) (*Config, error) {
 	result := Config{}
-
-	config, err := ioutil.ReadFile(file)
-
+	err := json.Unmarshal(b, &result)
 	if err != nil {
-		return &result, err
+		return nil, err
 	}
-
-	err = json.Unmarshal(config, &result)
 
 	err = result.validateConfig()
 
 	return &result, err
+}
+
+// NewConfigFromFile returns an Config object from a given file.
+func NewConfigFromFile(file string) (*Config, error) {
+	config, err := ioutil.ReadFile(file)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return NewConfigFromBytes(config)
 }
 
 // validateConfig validates the configuration and fills elements with default types.
@@ -63,7 +73,7 @@ func (config *Config) validateConfig() error {
 	return nil
 }
 
-// Returns an entry the the name.
+// GetEntryByName Returns an entry the the name.
 func (config *Config) GetEntryByName(name string) (*Entry, error) {
 	for _, element := range config.AllowedEntries {
 		if element.Name == name {
