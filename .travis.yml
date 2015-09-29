@@ -12,6 +12,8 @@ services: mongodb
 install:
     - go get -t -d -v ./...
     - go get github.com/onsi/ginkgo/ginkgo
+    - go get -u github.com/golang/lint/golint
 
 script:
     - ginkgo -r -cover --randomizeAllSpecs --randomizeSuites --failOnPending --trace --race --progress
+    - scripts/fmtpolice
