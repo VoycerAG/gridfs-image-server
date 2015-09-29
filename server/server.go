@@ -145,6 +145,8 @@ func isModified(file *mgo.GridFile, header *http.Header) bool {
 		return true
 	}
 
+	log.Println("not modified")
+
 	return false
 }
 

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 
 	. "github.com/VoycerAG/gridfs-image-server/server"
 
@@ -54,7 +55,7 @@ const (
 )
 
 var _ = Describe("Server", func() {
-	loadFixtureFile := func(source, target string, gridfs *mgo.GridFS) error {
+	loadFixtureFile := func(source, target string, gridfs *mgo.GridFS, metadata map[string]string) error {
 		fp, err := os.Open(source)
 		if err != nil {
 			return err
@@ -64,6 +65,8 @@ var _ = Describe("Server", func() {
 		if err != nil {
 			return err
 		}
+
+		gf.SetMeta(metadata)
 
 		defer gf.Close()
 		_, err = io.Copy(gf, fp)
@@ -118,7 +121,7 @@ var _ = Describe("Server", func() {
 		})
 
 		It("will deliver the original image without filter", func() {
-			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs)
+			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs, map[string]string{})
 			Expect(err).ToNot(HaveOccurred())
 			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg", nil)
 			Expect(err).ToNot(HaveOccurred())
@@ -130,7 +133,7 @@ var _ = Describe("Server", func() {
 		})
 
 		It("will deliver the resized image with filter", func() {
-			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs)
+			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs, map[string]string{})
 			Expect(err).ToNot(HaveOccurred())
 			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg?size=45x35", nil)
 			Expect(err).ToNot(HaveOccurred())
@@ -141,13 +144,56 @@ var _ = Describe("Server", func() {
 			Expect(rec.Header().Get("Etag")).ToNot(Equal(""))
 		})
 
+		It("will have original metadata entries after resize", func() {
+			metadata := map[string]string{
+				"copyright": "ACME Fantasia",
+				"license":   "MIT",
+			}
+
+			err := loadFixtureFile("../testdata/image.jpg", "metadata.jpg", gridfs, metadata)
+			Expect(err).ToNot(HaveOccurred())
+			req, err := http.NewRequest("GET", "/"+databaseName+"/metadata.jpg?size=45x35", nil)
+			Expect(err).ToNot(HaveOccurred())
+			handler := imageServer.Handler()
+			handler.ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(len(rec.Body.Bytes())).To(BeNumerically(">", 0))
+			Expect(rec.Header().Get("Etag")).ToNot(Equal(""))
+			query := gridfs.Find(bson.M{
+				"metadata.originalFilename": "metadata.jpg",
+				"metadata.size":             "45x35",
+				"metadata.resizeType":       "resize",
+			})
+
+			var file *mgo.GridFile
+			ok := gridfs.OpenNext(query.Iter(), &file)
+			Expect(ok).To(Equal(true), "could find file successfully")
+
+			actual := map[string]string{}
+			err = file.GetMeta(&actual)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(actual).To(ContainElement("ACME Fantasia"))
+			Expect(actual).To(ContainElement("45x35"))
+			Expect(actual).To(ContainElement("resize"))
+			Expect(actual).To(ContainElement("metadata.jpg"))
+			Expect(actual).To(ContainElement("MIT"))
+		})
+
 		It("will respond only with not modified if correct if none match got sent", func() {
-			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs)
+			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs, map[string]string{})
 			Expect(err).ToNot(HaveOccurred())
-			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg", nil)
+			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg?size=45x35", nil)
 			Expect(err).ToNot(HaveOccurred())
-			file, err := gridfs.Open("test.jpg")
-			Expect(err).ToNot(HaveOccurred())
+			query := gridfs.Find(bson.M{
+				"metadata.originalFilename": "test.jpg",
+				"metadata.size":             "45x35",
+				"metadata.resizeType":       "resize",
+			})
+
+			var file *mgo.GridFile
+			ok := gridfs.OpenNext(query.Iter(), &file)
+			Expect(ok).To(Equal(true), "could find file successfully")
+			Expect(file.MD5()).To(Equal("f7e9e8e583180dd945da1b3f5acfa758"))
 			req.Header.Set("If-None-Match", file.MD5())
 			handler := imageServer.Handler()
 			handler.ServeHTTP(rec, req)

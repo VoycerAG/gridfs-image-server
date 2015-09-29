@@ -18,6 +18,16 @@
 			"Rev": "14cafe28513321476c73967a5a4f3454b6129c46"
 		},
 		{
+			"ImportPath": "github.com/onsi/ginkgo",
+			"Comment": "v1.2.0-11-gd94e2f4",
+			"Rev": "d94e2f4000332f62b356ecb2840c98f4218f5358"
+		},
+		{
+			"ImportPath": "github.com/onsi/gomega",
+			"Comment": "v1.0-52-ga2ab864",
+			"Rev": "a2ab8644e0b6a33df2cbe44673bd0f6ebba9abc3"
+		},
+		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",
 			"Rev": "c25f46c4b94079672242ec48a545e7ca9ebe3aec"
 		},
@@ -41,11 +51,6 @@
 		{
 			"ImportPath": "gopkg.in/mgo.v2",
 			"Rev": "dc255bb679efa273b6544a03261c4053505498a4"
-		},
-		{
-			"ImportPath": "launchpad.net/gocheck",
-			"Comment": "87",
-			"Rev": "gustavo@niemeyer.net-20140225173054-xu9zlkf9kxhvow02"
 		}
 	]
 }
