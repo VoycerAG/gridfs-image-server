@@ -192,6 +192,7 @@ var _ = Describe("Server", func() {
 
 			var file *mgo.GridFile
 			ok := gridfs.OpenNext(query.Iter(), &file)
+			defer query.Iter().Close()
 			Expect(ok).To(Equal(true), "could find file successfully")
 			Expect(file.MD5()).To(Equal("f7e9e8e583180dd945da1b3f5acfa758"))
 			req.Header.Set("If-None-Match", file.MD5())
