@@ -40,7 +40,13 @@ func main() {
 	session.SetSyncTimeout(0)
 	session.SetMode(mgo.Eventual, true)
 
-	imageServer := server.NewImageServerWithNewRelic(config, server.GridfsStorage{Connection: session}, *newrelicKey)
+	storage, err := server.NewGridfsStorage(session)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	imageServer := server.NewImageServerWithNewRelic(config, storage, *newrelicKey)
 
 	handler := imageServer.Handler()
 

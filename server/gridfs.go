@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"io"
@@ -13,6 +14,24 @@ import (
 //GridfsStorage will be made private
 type GridfsStorage struct {
 	Connection *mgo.Session
+}
+
+//Storage interface can be implemented
+//to use the image server with any backend you like
+type Storage interface {
+	StoreChildImage(namespace, filename, format string, source image.Image, original Cacheable, entry *Entry, meta map[string]interface{}) (Cacheable, error)
+	FindImageByParentID(namespace, id string, entry *Entry) (Cacheable, error)
+	FindImageByParentFilename(namespace, filename string, entry *Entry) (Cacheable, error)
+	IsValidID(id string) bool
+}
+
+//NewGridfsStorage returns a new gridfs storage provider
+func NewGridfsStorage(con *mgo.Session) (Storage, error) {
+	if con == nil {
+		return nil, errors.New("mgo.Session must be set")
+	}
+
+	return &GridfsStorage{Connection: con}, nil
 }
 
 //Cacheable is an interface for caching
@@ -74,6 +93,11 @@ func (gfc gridFileCacheable) ID() interface{} {
 	return gfc.mf.Id()
 }
 
+//IsValidID will return true if id is a valid bson object id
+func (g GridfsStorage) IsValidID(id string) bool {
+	return bson.IsObjectIdHex(id)
+}
+
 //FindImageByParentID blub
 func (g GridfsStorage) FindImageByParentID(namespace, id string, entry *Entry) (Cacheable, error) {
 	gridfs := g.Connection.DB(namespace).GridFS("fs")
@@ -124,8 +148,8 @@ func (g GridfsStorage) FindImageByParentFilename(namespace, filename string, ent
 	return &gridFileCacheable{mf: fp}, nil
 }
 
-//NewImage will create a new image from source
-func (g GridfsStorage) NewImage(
+//StoreChildImage will create a new image from source
+func (g GridfsStorage) StoreChildImage(
 	namespace, filename, format string,
 	source image.Image,
 	original Cacheable,

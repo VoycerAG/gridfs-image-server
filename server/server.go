@@ -10,20 +10,16 @@ import (
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/yvasiyarov/gorelic"
-	"gopkg.in/mgo.v2/bson"
 )
 
 const (
-	//JpegMaximumQuality quality for jpeg compression
-	JpegMaximumQuality = 100
-
 	//ImageCacheDuration caching time for images
 	ImageCacheDuration = 315360000
 )
 
 type imageServer struct {
 	imageConfiguration *Config
-	storage            GridfsStorage
+	storage            Storage
 	handlerMux         http.Handler
 }
 
@@ -33,13 +29,13 @@ type Server interface {
 }
 
 //NewImageServer returns a new image server
-func NewImageServer(config *Config, storage GridfsStorage) Server {
+func NewImageServer(config *Config, storage Storage) Server {
 	return NewImageServerWithNewRelic(config, storage, "")
 }
 
 //NewImageServerWithNewRelic will return an image server with newrelic monitoring
 //licenseKey must be your newrelic license key
-func NewImageServerWithNewRelic(config *Config, storage GridfsStorage, licenseKey string) Server {
+func NewImageServerWithNewRelic(config *Config, storage Storage, licenseKey string) Server {
 	var handler http.Handler
 	// in order to simple configure the image server in the proxy configuration of nginx
 	// we will be getting every database variable from the request
@@ -48,7 +44,7 @@ func NewImageServerWithNewRelic(config *Config, storage GridfsStorage, licenseKe
 	r := mux.NewRouter()
 	r.HandleFunc("/", welcomeHandler)
 	//TODO refactor depedency mess
-	r.Handle(serverRoute, func(storage GridfsStorage, z *Config) http.HandlerFunc {
+	r.Handle(serverRoute, func(storage Storage, z *Config) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)
 
@@ -132,7 +128,7 @@ func setCacheHeaders(c Cacheable, w http.ResponseWriter) {
 }
 
 // imageHandler the main handler
-func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configuration, storage GridfsStorage, imageConfig *Config) {
+func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configuration, storage Storage, imageConfig *Config) {
 	log.Printf("Request on %s", r.URL)
 
 	if imageConfig == nil {
@@ -145,7 +141,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 
 	var foundImage Cacheable
 
-	if bson.IsObjectIdHex(requestConfig.Filename) {
+	if storage.IsValidID(requestConfig.Filename) {
 		foundImage, _ = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, resizeEntry)
 	} else {
 		//FindImageByParentFilename will not look for parent filename if
@@ -178,7 +174,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 
 	if foundImage == nil && resizeEntry != nil {
 		// generate new image
-		if bson.IsObjectIdHex(requestConfig.Filename) {
+		if storage.IsValidID(requestConfig.Filename) {
 			foundImage, _ = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, nil)
 		} else {
 			foundImage, _ = storage.FindImageByParentFilename(requestConfig.Database, requestConfig.Filename, nil)
@@ -199,7 +195,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 			return
 		}
 
-		targetfile, err := storage.NewImage(requestConfig.Database, GetRandomFilename(imageFormat), imageFormat, resizedImage, foundImage, resizeEntry, map[string]interface{}{})
+		targetfile, err := storage.StoreChildImage(requestConfig.Database, GetRandomFilename(imageFormat), imageFormat, resizedImage, foundImage, resizeEntry, map[string]interface{}{})
 		if err != nil {
 			log.Fatal(err)
 			w.WriteHeader(http.StatusInternalServerError)
