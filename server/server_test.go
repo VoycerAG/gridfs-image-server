@@ -93,9 +93,10 @@ var _ = Describe("Server", func() {
 			connection, err = mgo.Dial("localhost:27017")
 			connection.SetMode(mgo.Monotonic, true)
 			Expect(err).ToNot(HaveOccurred())
-			imageServer = NewImageServer(config, connection)
+			imageServer = NewImageServer(config, GridfsStorage{Connection: connection})
 			database = connection.DB(databaseName)
 			Expect(database).ToNot(BeNil())
+			database.DropDatabase()
 			gridfs = database.GridFS("fs")
 		})
 
@@ -203,7 +204,6 @@ var _ = Describe("Server", func() {
 		})
 
 		AfterSuite(func() {
-			database.DropDatabase()
 		})
 	})
 })

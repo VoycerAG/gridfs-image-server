@@ -48,5 +48,7 @@ Changes in Version 3:
 - If neither the original file, nor the resize file could be found, instead of StatusCode 400
 the server will now respond with a StatusCode 404.
 
+- If resizing fails, there won't be a BadRequest anymore, instead it will be a InternalServerError.
+
 - A bug that made initial resized image do not sent cache headers is fixed.
 

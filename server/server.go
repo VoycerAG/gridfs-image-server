@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"image"
 	"io"
 	"log"
 	"net/http"
@@ -11,7 +10,6 @@ import (
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/yvasiyarov/gorelic"
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -24,8 +22,8 @@ const (
 )
 
 type imageServer struct {
-	connection         *mgo.Session
 	imageConfiguration *Config
+	storage            GridfsStorage
 	handlerMux         http.Handler
 }
 
@@ -35,13 +33,13 @@ type Server interface {
 }
 
 //NewImageServer returns a new image server
-func NewImageServer(config *Config, db *mgo.Session) Server {
-	return NewImageServerWithNewRelic(config, db, "")
+func NewImageServer(config *Config, storage GridfsStorage) Server {
+	return NewImageServerWithNewRelic(config, storage, "")
 }
 
 //NewImageServerWithNewRelic will return an image server with newrelic monitoring
 //licenseKey must be your newrelic license key
-func NewImageServerWithNewRelic(config *Config, db *mgo.Session, licenseKey string) Server {
+func NewImageServerWithNewRelic(config *Config, storage GridfsStorage, licenseKey string) Server {
 	var handler http.Handler
 	// in order to simple configure the image server in the proxy configuration of nginx
 	// we will be getting every database variable from the request
@@ -50,7 +48,7 @@ func NewImageServerWithNewRelic(config *Config, db *mgo.Session, licenseKey stri
 	r := mux.NewRouter()
 	r.HandleFunc("/", welcomeHandler)
 	//TODO refactor depedency mess
-	r.Handle(serverRoute, func(y *mgo.Session, z *Config) http.HandlerFunc {
+	r.Handle(serverRoute, func(storage GridfsStorage, z *Config) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)
 
@@ -62,9 +60,9 @@ func NewImageServerWithNewRelic(config *Config, db *mgo.Session, licenseKey stri
 				return
 			}
 
-			imageHandler(w, r, requestConfig, y, z)
+			imageHandler(w, r, requestConfig, storage, z)
 		}
-	}(db, config))
+	}(storage, config))
 	http.Handle("/", r)
 
 	handler = http.DefaultServeMux
@@ -87,39 +85,9 @@ func (i imageServer) Handler() http.Handler {
 	return i.handlerMux
 }
 
-// addImageMetaData adds data to the image the image
-func addImageMetaData(targetImage *mgo.GridFile, imageData image.Image, imageFormat string, originalImage *mgo.GridFile, entry *Entry) {
-	width := imageData.Bounds().Dx()
-	height := imageData.Bounds().Dy()
-	originalRef := mgo.DBRef{"fs.files", originalImage.Id(), ""}
-
-	metadata := bson.M{
-		"width":            width,
-		"height":           height,
-		"original":         originalRef,
-		"originalFilename": originalImage.Name(),
-		"resizeType":       entry.Type,
-		"size":             fmt.Sprintf("%dx%d", entry.Width, entry.Height)}
-
-	originalMetadata := bson.M{}
-
-	if err := originalImage.GetMeta(&originalMetadata); err != nil {
-		log.Println("Original image data not found.")
-	} else {
-		for k, v := range originalMetadata {
-			if _, exists := metadata[k]; !exists {
-				metadata[k] = v
-			}
-		}
-	}
-
-	targetImage.SetContentType(fmt.Sprintf("image/%s", imageFormat))
-	targetImage.SetMeta(metadata)
-}
-
 // isModified returns true if the file must be delivered, false otherwise.
-func isModified(file *mgo.GridFile, header *http.Header) bool {
-	md5 := file.MD5()
+func isModified(c Cacheable, header *http.Header) bool {
+	md5 := c.CacheIdentifier()
 	modifiedHeader := header.Get("If-Modified-Since")
 	modifiedTime := time.Now()
 
@@ -128,7 +96,7 @@ func isModified(file *mgo.GridFile, header *http.Header) bool {
 	}
 
 	// normalize upload date to use the same format as the browser
-	uploadDate, _ := time.Parse(time.RFC1123, file.UploadDate().Format(time.RFC1123))
+	uploadDate, _ := time.Parse(time.RFC1123, c.LastModified().Format(time.RFC1123))
 
 	if header.Get("Cache-Control") == "no-cache" {
 		log.Printf("Is modified, because caching not enabled.")
@@ -151,27 +119,21 @@ func isModified(file *mgo.GridFile, header *http.Header) bool {
 }
 
 // setCacheHeaders sets the cache headers into the http.ResponseWriter
-func setCacheHeaders(file *mgo.GridFile, w http.ResponseWriter) {
-	w.Header().Set("Etag", file.MD5())
+func setCacheHeaders(c Cacheable, w http.ResponseWriter) {
+	w.Header().Set("Etag", c.CacheIdentifier())
 	w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", ImageCacheDuration))
 	d, _ := time.ParseDuration(fmt.Sprintf("%ds", ImageCacheDuration))
 
-	expires := file.UploadDate().Add(d)
+	expires := c.LastModified().Add(d)
 
-	w.Header().Set("Last-Modified", file.UploadDate().Format(time.RFC1123))
+	w.Header().Set("Last-Modified", c.LastModified().Format(time.RFC1123))
 	w.Header().Set("Expires", expires.Format(time.RFC1123))
-	w.Header().Set("Date", file.UploadDate().Format(time.RFC1123))
+	w.Header().Set("Date", c.LastModified().Format(time.RFC1123))
 }
 
 // imageHandler the main handler
-func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configuration, connection *mgo.Session, imageConfig *Config) {
+func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configuration, storage GridfsStorage, imageConfig *Config) {
 	log.Printf("Request on %s", r.URL)
-
-	if connection == nil {
-		log.Printf("Connection is not set.")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 
 	if imageConfig == nil {
 		log.Printf("imageConfiguration object is not set.")
@@ -179,18 +141,16 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 		return
 	}
 
-	gridfs := connection.DB(requestConfig.Database).GridFS("fs")
-
 	resizeEntry, _ := imageConfig.GetEntryByName(requestConfig.FormatName)
 
-	var foundImage *mgo.GridFile
+	var foundImage Cacheable
 
 	if bson.IsObjectIdHex(requestConfig.Filename) {
-		foundImage, _ = FindImageByParentID(requestConfig.Filename, resizeEntry, gridfs)
+		foundImage, _ = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, resizeEntry)
 	} else {
 		//FindImageByParentFilename will not look for parent filename if
 		//entry is not given rofl
-		foundImage, _ = FindImageByParentFilename(requestConfig.Filename, resizeEntry, gridfs)
+		foundImage, _ = storage.FindImageByParentFilename(requestConfig.Database, requestConfig.Filename, resizeEntry)
 	}
 
 	// case that we do not want resizing and did not find any image
@@ -210,8 +170,8 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 
 		setCacheHeaders(foundImage, w)
 
-		io.Copy(w, foundImage)
-		foundImage.Close()
+		io.Copy(w, foundImage.Data())
+		foundImage.Data().Close()
 		log.Printf("%d Image found, no resizing.\n", http.StatusOK)
 		return
 	}
@@ -219,9 +179,9 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 	if foundImage == nil && resizeEntry != nil {
 		// generate new image
 		if bson.IsObjectIdHex(requestConfig.Filename) {
-			foundImage, _ = FindImageByParentID(requestConfig.Filename, nil, gridfs)
+			foundImage, _ = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, nil)
 		} else {
-			foundImage, _ = FindImageByParentFilename(requestConfig.Filename, nil, gridfs)
+			foundImage, _ = storage.FindImageByParentFilename(requestConfig.Database, requestConfig.Filename, nil)
 		}
 
 		if foundImage == nil {
@@ -230,43 +190,23 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 			return
 		}
 
-		resizedImage, imageFormat, imageErr := ResizeImageFromGridfs(foundImage, resizeEntry)
+		resizedImage, imageFormat, imageErr := ResizeImageByEntry(foundImage.Data(), resizeEntry)
 
 		// in this case, resizing for this image does not work, therefore, we at least return the original image
 		if imageErr != nil {
-
-			// this might be a problem at the moment, go does not support interlaced pngs
-			// http://code.google.com/p/go/issues/detail?id=6293
-			// at the moment, we return a not found...
 			log.Printf("%d image could not be decoded.\n", http.StatusNotFound)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		// return the image to the client if all cache headers could be set
-		targetfile, _ := gridfs.Create(GetRandomFilename(imageFormat))
-
-		encodeErr := EncodeImage(targetfile, *resizedImage, imageFormat)
-
-		if targetfile == nil {
-			log.Printf("new gridfs file could not be created")
+		targetfile, err := storage.NewImage(requestConfig.Database, GetRandomFilename(imageFormat), imageFormat, resizedImage, foundImage, resizeEntry, map[string]interface{}{})
+		if err != nil {
+			log.Fatal(err)
 			w.WriteHeader(http.StatusInternalServerError)
-			return
 		}
-
-		if encodeErr != nil {
-			log.Fatalf(imageErr.Error())
-			w.WriteHeader(http.StatusBadRequest)
-			log.Printf("%d image could not be encoded.\n", http.StatusBadRequest)
-			return
-		}
-
-		addImageMetaData(targetfile, *resizedImage, imageFormat, foundImage, resizeEntry)
-
-		targetfile.Close()
 
 		setCacheHeaders(targetfile, w)
-		EncodeImage(w, *resizedImage, imageFormat)
+		EncodeImage(w, resizedImage, imageFormat)
 
 		log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
 	}

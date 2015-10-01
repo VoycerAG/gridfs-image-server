@@ -14,11 +14,10 @@ import (
 	"syscall"
 
 	"github.com/disintegration/imaging"
-	"gopkg.in/mgo.v2"
 )
 
-// ResizeImageFromGridfs resizes an gridfs image stream
-func ResizeImageFromGridfs(originalImage *mgo.GridFile, entry *Entry) (*image.Image, string, error) {
+// ResizeImageByEntry resizes an gridfs image stream
+func ResizeImageByEntry(originalImage ReadSeekCloser, entry *Entry) (image.Image, string, error) {
 	originalImageData, imageFormat, imgErr := image.Decode(originalImage)
 
 	if imgErr != nil {
@@ -39,7 +38,7 @@ func ResizeImageFromGridfs(originalImage *mgo.GridFile, entry *Entry) (*image.Im
 }
 
 // imageMagickFallback is used to convert a image with image magick
-func imageMagickFallback(originalImage *mgo.GridFile) (image.Image, error) {
+func imageMagickFallback(originalImage ReadSeekCloser) (image.Image, error) {
 	tempDirectory := os.TempDir()
 
 	file, err := ioutil.TempFile(tempDirectory, "magick_original_")
@@ -82,7 +81,7 @@ func imageMagickFallback(originalImage *mgo.GridFile) (image.Image, error) {
 }
 
 // ResizeImage resizes images or crops them if either size is not defined
-func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry) (*image.Image, string, error) {
+func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry) (image.Image, string, error) {
 	if entry.Width < 0 && entry.Height < 0 {
 		return nil, "", fmt.Errorf("At least one parameter of width or height must be specified")
 	}
@@ -135,7 +134,7 @@ func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry
 		dst = imaging.Thumbnail(originalImageData, int(targetWidth), int(targetHeight), imaging.Lanczos)
 	}
 
-	return &dst, imageFormat, err
+	return dst, imageFormat, err
 }
 
 // EncodeImage encodes the image with the given format
