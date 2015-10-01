@@ -83,6 +83,7 @@ var _ = Describe("Server", func() {
 			database     *mgo.Database
 			databaseName string
 			gridfs       *mgo.GridFS
+			storage      Storage
 		)
 
 		BeforeSuite(func() {
@@ -92,6 +93,8 @@ var _ = Describe("Server", func() {
 			Expect(err).ToNot(HaveOccurred())
 			connection, err = mgo.Dial("localhost:27017")
 			connection.SetMode(mgo.Monotonic, true)
+			Expect(err).ToNot(HaveOccurred())
+			storage, err = NewGridfsStorage(connection)
 			Expect(err).ToNot(HaveOccurred())
 			imageServer = NewImageServer(config, GridfsStorage{Connection: connection})
 			database = connection.DB(databaseName)
@@ -181,29 +184,27 @@ var _ = Describe("Server", func() {
 		})
 
 		It("will respond only with not modified if correct if none match got sent", func() {
-			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs, map[string]string{})
-			Expect(err).ToNot(HaveOccurred())
-			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg?size=45x35", nil)
-			Expect(err).ToNot(HaveOccurred())
-			query := gridfs.Find(bson.M{
-				"metadata.originalFilename": "test.jpg",
-				"metadata.size":             "45x35",
-				"metadata.resizeType":       "resize",
-			})
+			metadata := map[string]string{}
 
-			var file *mgo.GridFile
-			ok := gridfs.OpenNext(query.Iter(), &file)
-			defer query.Iter().Close()
-			Expect(ok).To(Equal(true), "could find file successfully")
-			Expect(file.MD5()).To(Equal("f7e9e8e583180dd945da1b3f5acfa758"))
-			req.Header.Set("If-None-Match", file.MD5())
+			err := loadFixtureFile("../testdata/image.jpg", "cached.jpg", gridfs, metadata)
+			Expect(err).ToNot(HaveOccurred())
+			req, err := http.NewRequest("GET", "/"+databaseName+"/cached.jpg?size=45x35", nil)
+			Expect(err).ToNot(HaveOccurred())
+
 			handler := imageServer.Handler()
+			handler.ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+
+			req, err = http.NewRequest("GET", "/"+databaseName+"/cached.jpg?size=45x35", nil)
+			Expect(err).ToNot(HaveOccurred())
+			rec = httptest.NewRecorder()
+
+			req.Header.Set("if-None-Match", "f7e9e8e583180dd945da1b3f5acfa758")
+
+			handler = imageServer.Handler()
 			handler.ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNotModified))
 			Expect(len(rec.Body.Bytes())).To(Equal(0))
-		})
-
-		AfterSuite(func() {
 		})
 	})
 })
