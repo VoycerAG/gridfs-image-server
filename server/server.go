@@ -144,8 +144,6 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 	if storage.IsValidID(requestConfig.Filename) {
 		foundImage, _ = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, resizeEntry)
 	} else {
-		//FindImageByParentFilename will not look for parent filename if
-		//entry is not given rofl
 		foundImage, _ = storage.FindImageByParentFilename(requestConfig.Database, requestConfig.Filename, resizeEntry)
 	}
 
@@ -173,7 +171,6 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 	}
 
 	if foundImage == nil && resizeEntry != nil {
-		// generate new image
 		if storage.IsValidID(requestConfig.Filename) {
 			foundImage, _ = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, nil)
 		} else {
@@ -186,19 +183,28 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 			return
 		}
 
-		resizedImage, imageFormat, imageErr := ResizeImageByEntry(foundImage.Data(), resizeEntry)
+		resizedImage, imageFormat, err := ResizeImageByEntry(foundImage.Data(), resizeEntry)
 
-		// in this case, resizing for this image does not work, therefore, we at least return the original image
-		if imageErr != nil {
+		if err != nil {
 			log.Printf("%d image could not be decoded.\n", http.StatusNotFound)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		targetfile, err := storage.StoreChildImage(requestConfig.Database, GetRandomFilename(imageFormat), imageFormat, resizedImage, foundImage, resizeEntry, map[string]interface{}{})
+		targetfile, err := storage.StoreChildImage(
+			requestConfig.Database,
+			GetRandomFilename(imageFormat),
+			imageFormat,
+			resizedImage,
+			foundImage,
+			resizeEntry,
+			map[string]interface{}{},
+		)
+
 		if err != nil {
 			log.Fatal(err)
 			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
 		setCacheHeaders(targetfile, w)

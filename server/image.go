@@ -80,59 +80,94 @@ func imageMagickFallback(originalImage ReadSeekCloser) (image.Image, error) {
 	return png.Decode(targetPNG)
 }
 
-// ResizeImage resizes images or crops them if either size is not defined
-func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry) (image.Image, string, error) {
-	if entry.Width < 0 && entry.Height < 0 {
-		return nil, "", fmt.Errorf("At least one parameter of width or height must be specified")
+//Resizer can resize an image
+//dstWidth and dstHeight are the desired output values
+//but it is not promised that the output image has exactly those bounds
+type Resizer interface {
+	Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error)
+}
+
+type plainResizer struct {
+}
+
+func (p plainResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+	if dstWidth < 0 && dstHeight < 0 {
+		return nil, fmt.Errorf("Either width or height must be greater zero to keep the existing ratio")
 	}
 
-	targetHeight := float64(entry.Height)
-	targetWidth := float64(entry.Width)
+	//since we use -1 as optional and imaging uses zero as optional
+	//we change -1 to 0 to keep the aspect ratio
+	if dstWidth < 0 {
+		dstWidth = 0
+	}
 
+	if dstHeight < 0 {
+		dstHeight = 0
+	}
+
+	return imaging.Resize(input, dstWidth, dstHeight, imaging.Lanczos), nil
+}
+
+type fitResizer struct {
+}
+
+func (f fitResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+	if dstWidth < 0 || dstHeight < 0 {
+		return nil, fmt.Errorf("Please specify both width and height for your target image")
+	}
+
+	originalBounds := input.Bounds()
+	originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
+
+	targetRatio := float64(dstWidth) / float64(dstHeight)
+
+	if targetRatio < originalRatio {
+		dstHeight = int(float64(dstWidth) / originalRatio)
+	} else {
+		dstWidth = int(float64(dstHeight) * originalRatio)
+	}
+
+	return imaging.Resize(input, int(dstWidth), int(dstHeight), imaging.Lanczos), nil
+}
+
+type cutResizer struct {
+}
+
+func (c cutResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+	if dstWidth < 0 && dstHeight < 0 {
+		return nil, fmt.Errorf("Either width or height must be greater zero to keep the existing ratio")
+	}
+
+	originalBounds := input.Bounds()
+	originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
+
+	if dstWidth < 0 {
+		dstWidth = int(float64(dstHeight) * originalRatio)
+	}
+
+	if dstHeight < 0 {
+		dstHeight = int(float64(dstWidth) / originalRatio)
+	}
+
+	return imaging.Thumbnail(input, dstWidth, dstHeight, imaging.Lanczos), nil
+}
+
+// ResizeImage resizes images or crops them if either size is not defined
+func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry) (image.Image, string, error) {
 	var dst image.Image
 	var err error
 
-	// the Thumbnail method needs correctly adjusted bounds in order to work
-	originalBounds := originalImageData.Bounds()
-	originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
+	var resizer Resizer
 
 	if entry.Type == TypeResize {
-		// the Resize method automatically adjusts ratio based format when one parameter is zero
-		if targetWidth < 0 {
-			targetWidth = 0
-		}
-
-		if targetHeight < 0 {
-			targetHeight = 0
-		}
-
-		dst = imaging.Resize(originalImageData, int(targetWidth), int(targetHeight), imaging.Lanczos)
+		resizer = plainResizer{}
 	} else if entry.Type == TypeFit {
-		if targetWidth < 0 || targetHeight < 0 {
-			return nil, "", fmt.Errorf("When using type fit, both height and width must be specified")
-		}
-
-		targetRatio := targetWidth / targetHeight
-
-		if targetRatio < originalRatio {
-			targetHeight = targetWidth / originalRatio
-		} else {
-			targetWidth = targetHeight * originalRatio
-		}
-
-		dst = imaging.Resize(originalImageData, int(targetWidth), int(targetHeight), imaging.Lanczos)
+		resizer = fitResizer{}
 	} else {
-		// typeCut
-		if targetWidth < 0 {
-			targetWidth = float64(targetHeight) * originalRatio
-		}
-
-		if targetHeight < 0 {
-			targetHeight = float64(targetWidth) / originalRatio
-		}
-
-		dst = imaging.Thumbnail(originalImageData, int(targetWidth), int(targetHeight), imaging.Lanczos)
+		resizer = cutResizer{}
 	}
+
+	dst, err = resizer.Resize(originalImageData, int(entry.Width), int(entry.Height))
 
 	return dst, imageFormat, err
 }
