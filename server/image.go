@@ -16,6 +16,13 @@ import (
 	"github.com/disintegration/imaging"
 )
 
+//Resizer can resize an image
+//dstWidth and dstHeight are the desired output values
+//but it is not promised that the output image has exactly those bounds
+type Resizer interface {
+	Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error)
+}
+
 // ResizeImageByEntry resizes an gridfs image stream
 func ResizeImageByEntry(originalImage ReadSeekCloser, entry *Entry) (image.Image, string, error) {
 	originalImageData, imageFormat, imgErr := image.Decode(originalImage)
@@ -28,63 +35,15 @@ func ResizeImageByEntry(originalImage ReadSeekCloser, entry *Entry) (image.Image
 		unresizedImage, magickError := imageMagickFallback(originalImage)
 
 		if magickError == nil {
-			return ResizeImage(unresizedImage, imageFormat, entry)
+			img, err := ResizeImage(unresizedImage, entry)
+			return img, imageFormat, err
 		}
 
 		return nil, imageFormat, imgErr
 	}
 
-	return ResizeImage(originalImageData, imageFormat, entry)
-}
-
-// imageMagickFallback is used to convert a image with image magick
-func imageMagickFallback(originalImage ReadSeekCloser) (image.Image, error) {
-	tempDirectory := os.TempDir()
-
-	file, err := ioutil.TempFile(tempDirectory, "magick_original_")
-	target, targetErr := ioutil.TempFile(tempDirectory, "magick_target_")
-
-	if targetErr != nil {
-		return nil, targetErr
-	}
-
-	defer syscall.Unlink(target.Name())
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer syscall.Unlink(file.Name())
-
-	io.Copy(file, originalImage)
-	file.Close()
-	originalImage.Close()
-
-	log.Printf("convert %s %s", file.Name(), target.Name())
-
-	cmd := exec.Command("convert", file.Name(), target.Name())
-
-	// blocking execution, since we need to read the image afterwards
-	someErr := cmd.Run()
-
-	if someErr != nil {
-		return nil, someErr
-	}
-
-	targetPNG, openErr := os.Open(target.Name())
-
-	if openErr != nil {
-		return nil, openErr
-	}
-
-	return png.Decode(targetPNG)
-}
-
-//Resizer can resize an image
-//dstWidth and dstHeight are the desired output values
-//but it is not promised that the output image has exactly those bounds
-type Resizer interface {
-	Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error)
+	img, err := ResizeImage(originalImageData, entry)
+	return img, imageFormat, err
 }
 
 type plainResizer struct {
@@ -130,10 +89,10 @@ func (f fitResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Im
 	return imaging.Resize(input, int(dstWidth), int(dstHeight), imaging.Lanczos), nil
 }
 
-type cutResizer struct {
+type cropResizer struct {
 }
 
-func (c cutResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+func (c cropResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 && dstHeight < 0 {
 		return nil, fmt.Errorf("Either width or height must be greater zero to keep the existing ratio")
 	}
@@ -153,23 +112,26 @@ func (c cutResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Im
 }
 
 // ResizeImage resizes images or crops them if either size is not defined
-func ResizeImage(originalImageData image.Image, imageFormat string, entry *Entry) (image.Image, string, error) {
-	var dst image.Image
-	var err error
-
-	var resizer Resizer
-
-	if entry.Type == TypeResize {
-		resizer = plainResizer{}
-	} else if entry.Type == TypeFit {
-		resizer = fitResizer{}
-	} else {
-		resizer = cutResizer{}
+func ResizeImage(originalImageData image.Image, entry *Entry) (image.Image, error) {
+	resizers := map[string]Resizer{
+		TypeResize: plainResizer{},
+		TypeFit:    fitResizer{},
+		TypeCrop:   cropResizer{},
 	}
 
-	dst, err = resizer.Resize(originalImageData, int(entry.Width), int(entry.Height))
+	resizer, found := resizers[entry.Type]
 
-	return dst, imageFormat, err
+	if !found {
+		// an error here would be a regression
+		// so for now we use a fallback behaviour
+		// in the future we can refactor it to
+		// only support registered resizers
+		resizer = resizers[TypeResize]
+	}
+
+	dst, err := resizer.Resize(originalImageData, int(entry.Width), int(entry.Height))
+
+	return dst, err
 }
 
 // EncodeImage encodes the image with the given format
@@ -187,4 +149,48 @@ func EncodeImage(targetImage io.Writer, imageData image.Image, imageFormat strin
 	}
 
 	return nil
+}
+
+// deprecated this will be removed in a future release
+// imageMagickFallback is used to convert a image with image magick
+func imageMagickFallback(originalImage ReadSeekCloser) (image.Image, error) {
+	tempDirectory := os.TempDir()
+
+	file, err := ioutil.TempFile(tempDirectory, "magick_original_")
+	target, targetErr := ioutil.TempFile(tempDirectory, "magick_target_")
+
+	if targetErr != nil {
+		return nil, targetErr
+	}
+
+	defer syscall.Unlink(target.Name())
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer syscall.Unlink(file.Name())
+
+	io.Copy(file, originalImage)
+	file.Close()
+	originalImage.Close()
+
+	log.Printf("convert %s %s", file.Name(), target.Name())
+
+	cmd := exec.Command("convert", file.Name(), target.Name())
+
+	// blocking execution, since we need to read the image afterwards
+	someErr := cmd.Run()
+
+	if someErr != nil {
+		return nil, someErr
+	}
+
+	targetPNG, openErr := os.Open(target.Name())
+
+	if openErr != nil {
+		return nil, openErr
+	}
+
+	return png.Decode(targetPNG)
 }
