@@ -52,3 +52,4 @@ the server will now respond with a StatusCode 404.
 
 - A bug that made initial resized image do not sent cache headers is fixed.
 
+- image magick fallback is dead

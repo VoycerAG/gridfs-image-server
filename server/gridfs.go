@@ -1,9 +1,10 @@
 package server
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"image"
 	"io"
 	"time"
 
@@ -19,7 +20,7 @@ type GridfsStorage struct {
 //Storage interface can be implemented
 //to use the image server with any backend you like
 type Storage interface {
-	StoreChildImage(namespace, filename, format string, source image.Image, original Cacheable, entry *Entry, meta map[string]interface{}) (Cacheable, error)
+	StoreChildImage(database, imageFormat string, r io.Reader, imageWidth, imageHeight int, original Cacheable, entry *Entry) (Cacheable, error)
 	FindImageByParentID(namespace, id string, entry *Entry) (Cacheable, error)
 	FindImageByParentFilename(namespace, filename string, entry *Entry) (Cacheable, error)
 	IsValidID(id string) bool
@@ -150,32 +151,36 @@ func (g GridfsStorage) FindImageByParentFilename(namespace, filename string, ent
 
 //StoreChildImage will create a new image from source
 func (g GridfsStorage) StoreChildImage(
-	namespace, filename, format string,
-	source image.Image,
+	database,
+	imageFormat string,
+	reader io.Reader,
+	imageWidth,
+	imageHeight int,
 	original Cacheable,
 	entry *Entry,
-	meta map[string]interface{},
 ) (Cacheable, error) {
-	gridfs := g.Connection.DB(namespace).GridFS("fs")
-	targetfile, err := gridfs.Create(filename)
+	gridfs := g.Connection.DB(database).GridFS("fs")
+	getFilename := func(extension string) string {
+		hash := sha256.New()
+		hash.Write([]byte(fmt.Sprintf("%s", time.Now().Nanosecond())))
+		md := hash.Sum(nil)
+		mdStr := hex.EncodeToString(md)
+
+		return fmt.Sprintf("%s.%s", mdStr, extension)
+	}
+
+	targetfile, err := gridfs.Create(getFilename(imageFormat))
 
 	if err != nil {
 		return nil, err
 	}
 
+	io.Copy(targetfile, reader)
 	defer targetfile.Close()
 
-	err = EncodeImage(targetfile, source, format)
-	if err != nil {
-		return nil, err
-	}
-
-	width := source.Bounds().Dx()
-	height := source.Bounds().Dy()
-
 	metadata := bson.M{
-		"width":            width,
-		"height":           height,
+		"width":            imageWidth,
+		"height":           imageHeight,
 		"originalFilename": original.Name(),
 		"resizeType":       entry.Type,
 		"size":             fmt.Sprintf("%dx%d", entry.Width, entry.Height)}
@@ -193,8 +198,10 @@ func (g GridfsStorage) StoreChildImage(
 		}
 	}
 
-	targetfile.SetContentType("image/" + format)
+	targetfile.SetContentType("image/" + imageFormat)
 	targetfile.SetMeta(metadata)
+
+	fmt.Sprintf("%#v", targetfile)
 
 	return &gridFileCacheable{mf: targetfile}, nil
 }

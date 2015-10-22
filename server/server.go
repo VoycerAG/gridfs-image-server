@@ -1,12 +1,15 @@
 package server
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/VoycerAG/gridfs-image-server/server/paint"
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/yvasiyarov/gorelic"
@@ -183,7 +186,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 			return
 		}
 
-		resizedImage, imageFormat, err := ResizeImageByEntry(foundImage.Data(), resizeEntry)
+		controller, err := paint.NewController(foundImage.Data())
 
 		if err != nil {
 			log.Printf("%d image could not be decoded.\n", http.StatusNotFound)
@@ -191,14 +194,28 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 			return
 		}
 
+		err = controller.Resize(resizeEntry.Type, int(resizeEntry.Width), int(resizeEntry.Height))
+		if err != nil {
+			log.Printf("%d image could not be resized.\n", http.StatusNotFound)
+			w.WriteHeader(http.StatusNotFound)
+			return
+
+		}
+
+		var b bytes.Buffer
+		buffer := bufio.NewWriter(&b)
+		writer := io.MultiWriter(w, buffer)
+		controller.Encode(writer)
+		buffer.Flush()
+
 		targetfile, err := storage.StoreChildImage(
 			requestConfig.Database,
-			GetRandomFilename(imageFormat),
-			imageFormat,
-			resizedImage,
+			controller.Format(),
+			bytes.NewReader(b.Bytes()),
+			controller.Image().Bounds().Dx(),
+			controller.Image().Bounds().Dy(),
 			foundImage,
 			resizeEntry,
-			map[string]interface{}{},
 		)
 
 		if err != nil {
@@ -208,7 +225,6 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 		}
 
 		setCacheHeaders(targetfile, w)
-		EncodeImage(w, resizedImage, imageFormat)
 
 		log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
 	}
