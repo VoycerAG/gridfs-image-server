@@ -201,7 +201,5 @@ func (g GridfsStorage) StoreChildImage(
 	targetfile.SetContentType("image/" + imageFormat)
 	targetfile.SetMeta(metadata)
 
-	fmt.Sprintf("%#v", targetfile)
-
 	return &gridFileCacheable{mf: targetfile}, nil
 }
