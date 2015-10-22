@@ -31,6 +31,11 @@ Image Server Configuration
 
 See the configuration.json file for examples on how to configure entries for the image server.
 
+Newrelic Monitoring
+-----
+Simply enter a valid license key on startup, and the image server will be monitored with the plugin GoRelic.
+You can find it under Plugins in your account.
+
 Nginx Configuration
 -----
 
