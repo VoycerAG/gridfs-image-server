@@ -32,15 +32,15 @@ const (
 //Resizer can resize an image
 //dstWidth and dstHeight are the desired output values
 //but it is not promised that the output image has exactly those bounds
-type Resizer interface {
+type resizer interface {
 	Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error)
 }
 
-//NewResizerByType returns a resizer for the given
+//newResizerByType returns a resizer for the given
 //type. If an invalid type was given
 //a plainResizer will be created
-func NewResizerByType(resizeType ResizeType) Resizer {
-	resizers := map[ResizeType]Resizer{
+func newResizerByType(resizeType ResizeType) resizer {
+	resizers := map[ResizeType]resizer{
 		TypeResize: plainResizer{},
 		TypeFit:    fitResizer{},
 		TypeCrop:   cropResizer{},

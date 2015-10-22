@@ -43,7 +43,7 @@ func (b basicController) Image() image.Image {
 }
 
 func (b *basicController) Resize(resizeType ResizeType, width, height int) error {
-	resizer := NewResizerByType(resizeType)
+	resizer := newResizerByType(resizeType)
 	data, err := resizer.Resize(b.data, width, height)
 	if err != nil {
 		return err
