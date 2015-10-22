@@ -3,7 +3,10 @@
 Go Image Server
 ===============
 
-This program is used in order to distribute gridfs files fast with nginx. 
+This program is used in order to distribute gridfs files fast with nginx.
+
+It has resizing capabalities and stores resized images in the gridfs filesystem as children
+of the original files. 
 
 Compilation:
 -----
@@ -12,14 +15,16 @@ Compilation:
 
 Instructions
 -----
-start the server with:
-
-    Usage of ./bin/VoycerAG:
-      -config="configuration.json": path to the configuration file
-      -host="localhost:27017": the database host with an optional port, localhost would suffice
-      -port=8000: the server port where we will serve images
-
-or use an init script. 
+```
+  -config string
+      path to the configuration file (default "configuration.json")
+  -host string
+      the database host with an optional port, localhost would suffice (default "localhost:27017")
+  -license string
+      your newrelic license key in order to enable monitoring
+  -port int
+      the server port where we will serve images (default 8000)
+```
 
 Image Server Configuration
 -----
@@ -39,17 +44,18 @@ The configuration section for your media vhost could look something like this:
     }
     
 
-Now images can be retrieved by calling /media/filename?size=entry
+Now resized images can be retrieved by calling /media/filename?size=entry where as the original image
+is still available with /media/filename. 
+
+If an invalid entry was requested, the image server will return the original image instead.
 
 ## Changelog
 
 Changes in Version 3:
 
-- If neither the original file, nor the resize file could be found, instead of StatusCode 400
-the server will now respond with a StatusCode 404.
-
-- If resizing fails, there won't be a BadRequest anymore, instead it will be a InternalServerError.
-
 - A bug that made initial resized image do not sent cache headers is fixed.
-
-- image magick fallback is dead
+- If neither the original file, nor the resize file could be found, instead of a status code 400
+the server will now respond with a status code 404.
+- If resizing fails, there won't be a status code 400 anymore, instead it will be a status code 500.
+- Configurations without resize type are no longer supported. 
+- image magick fallback is dead, therfore you should at least use go 1.4 now, 1.5 is recommened.

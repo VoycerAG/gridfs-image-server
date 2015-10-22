@@ -20,7 +20,7 @@ type GridfsStorage struct {
 //Storage interface can be implemented
 //to use the image server with any backend you like
 type Storage interface {
-	StoreChildImage(database, imageFormat string, r io.Reader, imageWidth, imageHeight int, original Cacheable, entry *Entry) (Cacheable, error)
+	StoreChildImage(database, imageFormat string, imageData io.Reader, imageWidth, imageHeight int, original Cacheable, entry *Entry) (Cacheable, error)
 	FindImageByParentID(namespace, id string, entry *Entry) (Cacheable, error)
 	FindImageByParentFilename(namespace, filename string, entry *Entry) (Cacheable, error)
 	IsValidID(id string) bool
@@ -99,7 +99,7 @@ func (g GridfsStorage) IsValidID(id string) bool {
 	return bson.IsObjectIdHex(id)
 }
 
-//FindImageByParentID blub
+//FindImageByParentID returns either the resized image that actually exists, or the original if entry is nil
 func (g GridfsStorage) FindImageByParentID(namespace, id string, entry *Entry) (Cacheable, error) {
 	gridfs := g.Connection.DB(namespace).GridFS("fs")
 	var fp *mgo.GridFile
@@ -149,6 +149,15 @@ func (g GridfsStorage) FindImageByParentFilename(namespace, filename string, ent
 	return &gridFileCacheable{mf: fp}, nil
 }
 
+func getRandomFilename(extension string) string {
+	hash := sha256.New()
+	hash.Write([]byte(fmt.Sprintf("%s", time.Now().Nanosecond())))
+	md := hash.Sum(nil)
+	mdStr := hex.EncodeToString(md)
+
+	return fmt.Sprintf("%s.%s", mdStr, extension)
+}
+
 //StoreChildImage will create a new image from source
 func (g GridfsStorage) StoreChildImage(
 	database,
@@ -160,23 +169,14 @@ func (g GridfsStorage) StoreChildImage(
 	entry *Entry,
 ) (Cacheable, error) {
 	gridfs := g.Connection.DB(database).GridFS("fs")
-	getFilename := func(extension string) string {
-		hash := sha256.New()
-		hash.Write([]byte(fmt.Sprintf("%s", time.Now().Nanosecond())))
-		md := hash.Sum(nil)
-		mdStr := hex.EncodeToString(md)
-
-		return fmt.Sprintf("%s.%s", mdStr, extension)
-	}
-
-	targetfile, err := gridfs.Create(getFilename(imageFormat))
+	targetfile, err := gridfs.Create(getRandomFilename(imageFormat))
 
 	if err != nil {
 		return nil, err
 	}
+	defer targetfile.Close()
 
 	io.Copy(targetfile, reader)
-	defer targetfile.Close()
 
 	metadata := bson.M{
 		"width":            imageWidth,

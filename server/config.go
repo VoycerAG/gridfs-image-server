@@ -48,14 +48,13 @@ func NewConfigFromFile(file string) (*Config, error) {
 
 // validateConfig validates the configuration and fills elements with default types.
 func (config *Config) validateConfig() error {
-	for index, element := range config.AllowedEntries {
+	for _, element := range config.AllowedEntries {
 		if element.Width <= 0 && element.Height <= 0 {
 			return fmt.Errorf("The width and height of the configuration element with name \"%s\" are invalid.", element.Name)
 		}
 
 		if element.Type == "" {
-			config.AllowedEntries[index].Type = manipulation.TypeResize
-			continue
+			return fmt.Errorf("Type must be set")
 		}
 
 		if _, found := manipulation.AvailableResizeTypes[element.Type]; !found {
