@@ -7,15 +7,13 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-
-	"github.com/VoycerAG/gridfs-image-server/server/manipulation"
 )
 
 //Controller lets you completely control
 //one image
 type Controller interface {
 	Encode(target io.Writer) error
-	Resize(resizeType manipulation.ResizeType, width, height int) error
+	Resize(resizeType ResizeType, width, height int) error
 	Image() image.Image
 	Format() string
 }
@@ -44,8 +42,8 @@ func (b basicController) Image() image.Image {
 	return b.data
 }
 
-func (b *basicController) Resize(resizeType manipulation.ResizeType, width, height int) error {
-	resizer := manipulation.NewResizerByType(resizeType)
+func (b *basicController) Resize(resizeType ResizeType, width, height int) error {
+	resizer := NewResizerByType(resizeType)
 	data, err := resizer.Resize(b.data, width, height)
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-package manipulation
+package paint
 
 import (
 	"fmt"

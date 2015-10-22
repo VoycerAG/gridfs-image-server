@@ -125,7 +125,7 @@ var _ = Describe("Server", func() {
 		})
 
 		It("will deliver the original image without filter", func() {
-			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs, map[string]string{})
+			err := loadFixtureFile("./testdata/image.jpg", "test.jpg", gridfs, map[string]string{})
 			Expect(err).ToNot(HaveOccurred())
 			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg", nil)
 			Expect(err).ToNot(HaveOccurred())
@@ -137,7 +137,7 @@ var _ = Describe("Server", func() {
 		})
 
 		It("will deliver the resized image with filter", func() {
-			err := loadFixtureFile("../testdata/image.jpg", "test.jpg", gridfs, map[string]string{})
+			err := loadFixtureFile("./testdata/image.jpg", "test.jpg", gridfs, map[string]string{})
 			Expect(err).ToNot(HaveOccurred())
 			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg?size=45x35", nil)
 			Expect(err).ToNot(HaveOccurred())
@@ -154,7 +154,7 @@ var _ = Describe("Server", func() {
 				"license":   "MIT",
 			}
 
-			err := loadFixtureFile("../testdata/image.jpg", "metadata.jpg", gridfs, metadata)
+			err := loadFixtureFile("./testdata/image.jpg", "metadata.jpg", gridfs, metadata)
 			Expect(err).ToNot(HaveOccurred())
 			req, err := http.NewRequest("GET", "/"+databaseName+"/metadata.jpg?size=45x35", nil)
 			Expect(err).ToNot(HaveOccurred())
@@ -186,7 +186,7 @@ var _ = Describe("Server", func() {
 		It("will respond only with not modified if correct if none match got sent", func() {
 			metadata := map[string]string{}
 
-			err := loadFixtureFile("../testdata/image.jpg", "cached.jpg", gridfs, metadata)
+			err := loadFixtureFile("./testdata/image.jpg", "cached.jpg", gridfs, metadata)
 			Expect(err).ToNot(HaveOccurred())
 			req, err := http.NewRequest("GET", "/"+databaseName+"/cached.jpg?size=45x35", nil)
 			Expect(err).ToNot(HaveOccurred())

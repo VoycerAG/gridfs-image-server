@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/VoycerAG/gridfs-image-server/server/manipulation"
+	"github.com/VoycerAG/gridfs-image-server/server/paint"
 )
 
 // Config contains entries for
@@ -16,10 +16,10 @@ type Config struct {
 
 // Entry is one allowed image configuration
 type Entry struct {
-	Name   string                  `json:name`
-	Width  int64                   `json:width`
-	Height int64                   `json:height`
-	Type   manipulation.ResizeType `json:type`
+	Name   string           `json:name`
+	Width  int64            `json:width`
+	Height int64            `json:height`
+	Type   paint.ResizeType `json:type`
 }
 
 //NewConfigFromBytes generates a new config object by a byte stream
@@ -57,8 +57,8 @@ func (config *Config) validateConfig() error {
 			return fmt.Errorf("Type must be set")
 		}
 
-		if _, found := manipulation.AvailableResizeTypes[element.Type]; !found {
-			return fmt.Errorf("Type must be either %s, %s or %s at element \"%s\"", manipulation.TypeCrop, manipulation.TypeResize, manipulation.TypeFit, element.Name)
+		if _, found := paint.AvailableResizeTypes[element.Type]; !found {
+			return fmt.Errorf("Type must be either %s, %s or %s at element \"%s\"", paint.TypeCrop, paint.TypeResize, paint.TypeFit, element.Name)
 		}
 	}
 
