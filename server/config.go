@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+
+	"github.com/VoycerAG/gridfs-image-server/server/manipulation"
 )
 
 // Config contains entries for
@@ -12,21 +14,12 @@ type Config struct {
 	AllowedEntries []Entry `json:allowedEntries`
 }
 
-const (
-	// TypeResize will either force the given sizes, or resize via original ratio when either height or width is not specified
-	TypeResize = "resize"
-	// TypeCrop will generate an image with exact sizes, but only a part of the image is visible
-	TypeCrop = "crop"
-	//TypeFit will resize the image according to the original ratio, but will not exceed the given bounds
-	TypeFit = "fit"
-)
-
 // Entry is one allowed image configuration
 type Entry struct {
-	Name   string `json:name`
-	Width  int64  `json:width`
-	Height int64  `json:height`
-	Type   string `json:type`
+	Name   string                  `json:name`
+	Width  int64                   `json:width`
+	Height int64                   `json:height`
+	Type   manipulation.ResizeType `json:type`
 }
 
 //NewConfigFromBytes generates a new config object by a byte stream
@@ -61,12 +54,12 @@ func (config *Config) validateConfig() error {
 		}
 
 		if element.Type == "" {
-			config.AllowedEntries[index].Type = TypeResize
+			config.AllowedEntries[index].Type = manipulation.TypeResize
 			continue
 		}
 
-		if element.Type != TypeResize && element.Type != TypeCrop && element.Type != TypeFit {
-			return fmt.Errorf("Type must be either %s, %s or %s at element \"%s\"", TypeCrop, TypeResize, TypeFit, element.Name)
+		if _, found := manipulation.AvailableResizeTypes[element.Type]; !found {
+			return fmt.Errorf("Type must be either %s, %s or %s at element \"%s\"", manipulation.TypeCrop, manipulation.TypeResize, manipulation.TypeFit, element.Name)
 		}
 	}
 
