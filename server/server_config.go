@@ -5,16 +5,15 @@ import (
 	"net/http"
 )
 
-// ServerConfiguration is a wrapper object for request parameters.
-type ServerConfiguration struct {
+// Configuration is a wrapper object for request parameters.
+type Configuration struct {
 	Database   string
 	FormatName string
 	Filename   string
 }
 
-// createConfigurationFromVars validate all necessary request parameters
-func CreateConfigurationFromVars(r *http.Request, vars map[string]string) (*ServerConfiguration, error) {
-	config := ServerConfiguration{}
+// CreateConfigurationFromVars validate all necessary request parameters
+func CreateConfigurationFromVars(r *http.Request, vars map[string]string) (*Configuration, error) {
 
 	database := vars["database"]
 
@@ -30,9 +29,5 @@ func CreateConfigurationFromVars(r *http.Request, vars map[string]string) (*Serv
 
 	formatName := r.URL.Query().Get("size")
 
-	config.Database = database
-	config.FormatName = formatName
-	config.Filename = filename
-
-	return &config, nil
+	return &Configuration{Database: database, FormatName: formatName, Filename: filename}, nil
 }
