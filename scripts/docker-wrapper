@@ -1,0 +1,10 @@
+#!/bin/bash
+
+host=$MONGODB_CONNECTION
+license=$NEWRELIC_LICENSE
+
+if [ -n $MONGODB_PORT_27017_TCP_ADDR ] ; then
+  host=$MONGODB_PORT_27017_TCP_ADDR:$MONGODB_PORT_27017_TCP_PORT 
+fi
+
+./image-server -config /etc/image-server/configuration.json -host=$host -license=$license

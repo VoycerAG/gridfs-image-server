@@ -1,0 +1,3 @@
+docker:
+	GOOS=linux GOARCH=amd64 go build -o build/image-server.x64.1.5 application.go
+	docker build -t gridfs_image_server .
