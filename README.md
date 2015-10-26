@@ -8,7 +8,24 @@ This program is used in order to distribute gridfs files fast with nginx.
 It has resizing capabalities and stores resized images in the gridfs filesystem as children
 of the original files. 
 
-Compilation:
+Run using docker
+-----
+Using the default configuration and no newrelic monitoring:
+```docker run --link mongodb:mongodb -v -p 50000:8000 voycerag/gridfs_image_server```
+
+Optional environment parameters:
+- NEWRELIC_LICENSE the license identifier for your newrelic account
+- MONGODB_CONNECTION if you do not use linking you can specify this env variable (e.g. 172.17.42.1:27017)
+
+Volumes:
+- /etc/image-server - you can mount this folder to use a custom configuration.json file.
+
+Example command with all parameters:
+```
+  docker run -v /etc/configs:/etc/image-server -p 50000:8000 -e NEWRELIC_LICENSE=someIdentifier -e MONGODB_CONNECTION=172.17.42.1:27017 voycerag/gridfs_image_server
+```
+
+Compilation
 -----
 
 * install project using go get github.com/VoycerAG/gridfs-image-server

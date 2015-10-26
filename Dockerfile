@@ -3,16 +3,11 @@ FROM debian:wheezy
 ENV NEWRELIC_LICENSE ""
 ENV MONGODB_CONNECTION "localhost:27017"
 
-
-
 EXPOSE 8000
 
 COPY configuration.json /etc/image-server/
 
 VOLUME ["/etc/image-server"]
-
-COPY build/image-server.x64.1.5 /image-server
-COPY scripts/docker-wrapper /run-image-server
 
 # we need this for stupid ssl certificates
 # if we find a better solution for certs
@@ -21,4 +16,7 @@ COPY scripts/docker-wrapper /run-image-server
 RUN apt-get update
 RUN apt-get install -y ca-certificates 
 
-CMD /bin/sh run-image-server
+COPY build/image-server.x64.1.5 /image-server
+COPY scripts/docker-wrapper /run-image-server
+
+CMD /bin/bash run-image-server
