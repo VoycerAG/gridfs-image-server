@@ -57,7 +57,8 @@ func (config *Config) validateConfig() error {
 			return fmt.Errorf("Type must be set")
 		}
 
-		if _, found := paint.AvailableResizeTypes[element.Type]; !found {
+		types := paint.GetAvailableTypes()
+		if _, found := types[element.Type]; !found {
 			return fmt.Errorf("Type must be either %s, %s or %s at element \"%s\"", paint.TypeCrop, paint.TypeResize, paint.TypeFit, element.Name)
 		}
 	}

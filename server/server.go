@@ -44,10 +44,12 @@ func NewImageServerWithNewRelic(config *Config, storage Storage, licenseKey stri
 	// we will be getting every database variable from the request
 	serverRoute := "/{database}/{filename}"
 
+	customResizers := map[paint.ResizeType]paint.Resizer{}
+
 	r := mux.NewRouter()
 	r.HandleFunc("/", welcomeHandler)
 	//TODO refactor depedency mess
-	r.Handle(serverRoute, func(storage Storage, z *Config) http.HandlerFunc {
+	r.Handle(serverRoute, func(storage Storage, z *Config, c map[paint.ResizeType]paint.Resizer) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)
 
@@ -59,9 +61,9 @@ func NewImageServerWithNewRelic(config *Config, storage Storage, licenseKey stri
 				return
 			}
 
-			imageHandler(w, r, requestConfig, storage, z)
+			imageHandler(w, r, requestConfig, storage, z, customResizers)
 		}
-	}(storage, config))
+	}(storage, config, customResizers))
 	http.Handle("/", r)
 
 	handler = http.DefaultServeMux
@@ -131,7 +133,13 @@ func setCacheHeaders(c Cacheable, w http.ResponseWriter) {
 }
 
 // imageHandler the main handler
-func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configuration, storage Storage, imageConfig *Config) {
+func imageHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	requestConfig *Configuration,
+	storage Storage,
+	imageConfig *Config,
+	customResizers map[paint.ResizeType]paint.Resizer) {
 	log.Printf("Request on %s", r.URL)
 
 	if imageConfig == nil {
@@ -192,7 +200,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 			return
 		}
 
-		controller, err := paint.NewController(foundImage.Data())
+		controller, err := paint.NewController(foundImage.Data(), customResizers)
 
 		if err != nil {
 			log.Printf("%d image could not be decoded Reason %s.\n", http.StatusNotFound, err.Error())
