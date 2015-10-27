@@ -11,7 +11,7 @@ of the original files.
 Compilation:
 -----
 
-* install project using go get github.com/VoycerAG/gridfs-image-server
+Install project using ```go get github.com/VoycerAG/gridfs-image-server```
 
 Instructions
 -----
@@ -29,7 +29,7 @@ Instructions
 Image Server Configuration
 -----
 
-See the configuration.json file for examples on how to configure entries for the image server.
+See the [configuration.json](configuration.json) file for examples on how to configure entries for the image server.
 
 Newrelic Monitoring
 -----
@@ -47,10 +47,10 @@ The configuration section for your media vhost could look something like this:
          proxy_set_header Host $http_host;
          proxy_pass http://127.0.0.1:8000/mongo_database/;
     }
-    
 
-Now resized images can be retrieved by calling /media/filename?size=entry where as the original image
-is still available with /media/filename. 
+
+Now resized images can be retrieved by calling ```/media/filename?size=entry``` where as the original image
+is still available with ```/media/filename```.
 
 If an invalid entry was requested, the image server will return the original image instead.
 
