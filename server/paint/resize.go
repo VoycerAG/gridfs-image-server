@@ -54,6 +54,14 @@ func GetAvailableTypes() map[ResizeType]ResizeType {
 	return result
 }
 
+//GetCustomResizers returns a read only list of custom resizers
+func GetCustomResizers() map[ResizeType]Resizer {
+	extraResizerLock.Lock()
+	defer extraResizerLock.Unlock()
+
+	return extraAllowedTypes
+}
+
 //Resizer can resize an image
 //dstWidth and dstHeight are the desired output values
 //but it is not promised that the output image has exactly those bounds
@@ -70,9 +78,11 @@ func newResizerByType(resizeType ResizeType, customResizer map[ResizeType]Resize
 		TypeFit:    fitResizer{},
 		TypeCrop:   cropResizer{},
 	}
+	log.Println("%s %#v.", "resizers", customResizer)
 
 	for rtype, resizer := range customResizer {
 		resizers[rtype] = resizer
+		log.Println("%s %#v.", rtype, resizer)
 	}
 
 	resizer, found := resizers[resizeType]

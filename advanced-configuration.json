@@ -1,0 +1,88 @@
+{
+	"allowedEntries" : [
+		{
+			"name" : "smart2", 
+			"width" : 200, 
+			"height" : 150,
+			"type" : "smartcrop"
+		}, 
+			{
+			"name" : "smart0", 
+			"width" : 45, 
+			"height" : 35,
+			"type" : "smartcrop"
+		}, 
+			{
+			"name" : "45x35", 
+			"width" : 45, 
+			"height" : 35,
+			"type" : "fit"
+		}, 
+		{
+			"name" : "smart1", 
+			"width" : 294, 
+			"height" : 300, 
+			"type" : "smartcrop"
+		},
+	{
+			"name" : "294x300", 
+			"width" : 294, 
+			"height" : 300, 
+			"type" : "fit"
+		},
+		{
+			"name" : "294x210", 
+			"width" : 294, 
+			"height" : 210,
+			"type" : "crop"
+		},
+		{
+			"name" : "105x95", 
+			"width" : 105, 
+			"height" : 95,
+			"type" : "crop"
+		},
+		{
+			"name" : "288x200", 
+			"width" : 288, 
+			"height" : 200,
+			"type" : "crop" 
+		},
+		{
+			"name" : "50x40", 
+			"width" : 50, 
+			"height" : 40,
+			"type" : "crop" 
+		},
+		{
+			"name" : "50x50", 
+			"width" : 50, 
+			"height" : 50,
+			"type" : "crop" 
+		},
+		{
+			"name" : "130x260", 
+			"width" : 130, 
+			"height" : 260, 
+			"type" : "fit"
+		},
+		{
+			"name" : "310x230", 
+			"width" : 310, 
+			"height" : 230, 
+			"type" : "fit"
+		},
+		{
+			"name" : "302x302", 
+			"width" : 302, 
+			"height" : 302,
+			"type" : "fit"
+		},
+		{
+			"name" : "150x150", 
+			"width" : 150, 
+			"height" : 150,
+			"type" : "crop"
+		}
+	]
+}

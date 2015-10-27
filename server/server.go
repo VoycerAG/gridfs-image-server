@@ -44,12 +44,10 @@ func NewImageServerWithNewRelic(config *Config, storage Storage, licenseKey stri
 	// we will be getting every database variable from the request
 	serverRoute := "/{database}/{filename}"
 
-	customResizers := map[paint.ResizeType]paint.Resizer{}
-
 	r := mux.NewRouter()
 	r.HandleFunc("/", welcomeHandler)
 	//TODO refactor depedency mess
-	r.Handle(serverRoute, func(storage Storage, z *Config, c map[paint.ResizeType]paint.Resizer) http.HandlerFunc {
+	r.Handle(serverRoute, func(storage Storage, z *Config) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)
 
@@ -61,9 +59,9 @@ func NewImageServerWithNewRelic(config *Config, storage Storage, licenseKey stri
 				return
 			}
 
-			imageHandler(w, r, requestConfig, storage, z, customResizers)
+			imageHandler(w, r, requestConfig, storage, z)
 		}
-	}(storage, config, customResizers))
+	}(storage, config))
 	http.Handle("/", r)
 
 	handler = http.DefaultServeMux
@@ -138,8 +136,7 @@ func imageHandler(
 	r *http.Request,
 	requestConfig *Configuration,
 	storage Storage,
-	imageConfig *Config,
-	customResizers map[paint.ResizeType]paint.Resizer) {
+	imageConfig *Config) {
 	log.Printf("Request on %s", r.URL)
 
 	if imageConfig == nil {
@@ -200,6 +197,8 @@ func imageHandler(
 			return
 		}
 
+		customResizers := paint.GetCustomResizers()
+		fmt.Printf("%#v", customResizers)
 		controller, err := paint.NewController(foundImage.Data(), customResizers)
 
 		if err != nil {

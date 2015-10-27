@@ -7,6 +7,7 @@ import (
 
 	"github.com/VoycerAG/gridfs-image-server/server/paint"
 	"github.com/muesli/smartcrop"
+	"github.com/nfnt/resize"
 )
 
 const (
@@ -19,13 +20,14 @@ type subImager interface {
 }
 
 type smartcropResizer struct {
+	haarcascade string
 }
 
 //NewSmartcrop returns a new resizer for the `TypeSmartcrop`
 //it needs opencv internally so this resizer
 //WILL NOT ALLOW CROSS COMPILE
-func NewSmartcrop() paint.Resizer {
-	return &smartcropResizer{}
+func NewSmartcrop(haarcascade string) paint.Resizer {
+	return &smartcropResizer{haarcascade: haarcascade}
 }
 
 func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
@@ -33,8 +35,15 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 		return nil, fmt.Errorf("Please specify both width and height for your target image")
 	}
 
+	cropSettings := smartcrop.CropSettings{
+		FaceDetection:                    true,
+		FaceDetectionHaarCascadeFilepath: s.haarcascade,
+		InterpolationType:                resize.Bicubic,
+		DebugMode:                        false,
+	}
+
 	//it only analyzes the image
-	crop, err := smartcrop.SmartCrop(input, dstWidth, dstHeight)
+	crop, err := smartcrop.NewAnalyzerWithCropSettings(cropSettings).FindBestCrop(input, dstWidth, dstHeight)
 	if err != nil {
 		return nil, err
 	}

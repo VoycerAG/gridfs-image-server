@@ -15,7 +15,6 @@ import (
 
 //init will automatically register the smartcrop resizer
 func init() {
-	paint.AddResizer(resizer.TypeSmartcrop, resizer.NewSmartcrop())
 }
 
 // main starts the server and returns an invalid result as exit code
@@ -23,6 +22,7 @@ func main() {
 	configurationFilepath := flag.String("config", "configuration.json", "path to the configuration file")
 	serverPort := flag.Int("port", 8000, "the server port where we will serve images")
 	host := flag.String("host", "localhost:27017", "the database host with an optional port, localhost would suffice")
+	haarcascade := flag.String("haarcascade", "", "haarcascade file path")
 	newrelicKey := flag.String("license", "", "your newrelic license key in order to enable monitoring")
 
 	flag.Parse()
@@ -31,14 +31,21 @@ func main() {
 		log.Fatal("configuration must be given")
 		return
 	}
+	if *haarcascade == "" {
+		log.Fatal("haarcascade file must be set")
+		return
+	}
 
-	config, err := server.NewConfigFromFile(*configurationFilepath)
+	smartcrop := resizer.NewSmartcrop(*haarcascade)
+	paint.AddResizer(resizer.TypeSmartcrop, smartcrop)
+
+	session, err := mgo.Dial(*host)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
-	session, err := mgo.Dial(*host)
+	config, err := server.NewConfigFromFile(*configurationFilepath)
 	if err != nil {
 		log.Fatal(err)
 		return
