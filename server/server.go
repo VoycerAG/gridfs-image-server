@@ -143,22 +143,25 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 	resizeEntry, _ := imageConfig.GetEntryByName(requestConfig.FormatName)
 
 	var foundImage Cacheable
+	var notFoundErr error
 
 	if storage.IsValidID(requestConfig.Filename) {
-		foundImage, _ = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, resizeEntry)
+		foundImage, notFoundErr = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, resizeEntry)
 	} else {
-		foundImage, _ = storage.FindImageByParentFilename(requestConfig.Database, requestConfig.Filename, resizeEntry)
+		foundImage, notFoundErr = storage.FindImageByParentFilename(requestConfig.Database, requestConfig.Filename, resizeEntry)
 	}
 
+	found := notFoundErr == nil
+
 	// case that we do not want resizing and did not find any image
-	if foundImage == nil && resizeEntry == nil {
+	if !found && resizeEntry == nil {
 		log.Printf("%d file not found.\n", http.StatusNotFound)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	// we found a image but did not want resizing
-	if foundImage != nil {
+	if found {
 		if !isModified(foundImage, &r.Header) {
 			w.WriteHeader(http.StatusNotModified)
 			log.Printf("%d Returning cached image.\n", http.StatusNotModified)
@@ -173,14 +176,17 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 		return
 	}
 
-	if foundImage == nil && resizeEntry != nil {
+	if !found && resizeEntry != nil {
+		var notFoundErr error
 		if storage.IsValidID(requestConfig.Filename) {
-			foundImage, _ = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, nil)
+			foundImage, notFoundErr = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, nil)
 		} else {
-			foundImage, _ = storage.FindImageByParentFilename(requestConfig.Database, requestConfig.Filename, nil)
+			foundImage, notFoundErr = storage.FindImageByParentFilename(requestConfig.Database, requestConfig.Filename, nil)
 		}
 
-		if foundImage == nil {
+		found = notFoundErr == nil
+
+		if !found {
 			log.Printf("%d Could not find original image.\n", http.StatusNotFound)
 			w.WriteHeader(http.StatusNotFound)
 			return

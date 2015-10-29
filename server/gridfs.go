@@ -118,7 +118,7 @@ func (g GridfsStorage) FindImageByParentID(namespace, id string, entry *Entry) (
 	gridfs.OpenNext(iter, &fp)
 
 	if fp == nil {
-		return gridFileCacheable{mf: fp}, fmt.Errorf("no image found for id %s", id)
+		return gridFileCacheable{mf: &mgo.GridFile{}}, fmt.Errorf("no image found for id %s", id)
 	}
 
 	return &gridFileCacheable{mf: fp}, nil
