@@ -195,7 +195,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 		controller, err := paint.NewController(foundImage.Data())
 
 		if err != nil {
-			log.Printf("%d image could not be decoded.\n", http.StatusNotFound)
+			log.Printf("%d image could not be decoded Reason %s.\n", http.StatusNotFound, err.Error())
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
