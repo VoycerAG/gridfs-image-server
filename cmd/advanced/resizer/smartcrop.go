@@ -6,6 +6,7 @@ import (
 	"image"
 
 	"github.com/VoycerAG/gridfs-image-server/server/paint"
+	"github.com/disintegration/imaging"
 	"github.com/muesli/smartcrop"
 	"github.com/nfnt/resize"
 )
@@ -40,16 +41,46 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 		FaceDetectionHaarCascadeFilepath: s.haarcascade,
 		InterpolationType:                resize.Bicubic,
 		DebugMode:                        false,
+		Prescale:                         true,
+		PrescaleValue:                    400,
 	}
+	/*
+	 *
+	 *  desiredRatio := float64(dstWidth) / float64(dstHeight)
+	 *  targetWidth := 250
+	 *
+	 */
+	/*
+	 *height := int(desiredRatio * float64(targetWidth))
+	 */
 
 	//it only analyzes the image
-	crop, err := smartcrop.NewAnalyzerWithCropSettings(cropSettings).FindBestCrop(input, dstWidth, dstHeight)
+	crop, err := smartcrop.NewAnalyzerWithCropSettings(cropSettings).FindBestCrop(input, 400, 300)
 	if err != nil {
 		return nil, err
 	}
 
+	startX := crop.X
+	startY := crop.Y
+
+	fmt.Printf("Start Position: %d x %d Crop: %#v\n", startX, startY, crop)
 	if sub, ok := input.(subImager); ok {
-		return sub.SubImage(image.Rect(crop.X, crop.Y, crop.Width+crop.X, crop.Height+crop.Y)), nil
+		cropImage := sub.SubImage(image.Rect(startX, startY, crop.Width, crop.Height))
+
+		//cropImage must now be resized to the desired format
+
+		originalBounds := input.Bounds()
+		originalRatio := float64(originalBounds.Dx()) / float64(originalBounds.Dy())
+
+		if dstWidth < 0 {
+			dstWidth = int(float64(dstHeight) * originalRatio)
+		}
+
+		if dstHeight < 0 {
+			dstHeight = int(float64(dstWidth) / originalRatio)
+		}
+
+		return imaging.Thumbnail(cropImage, dstWidth, dstHeight, imaging.Lanczos), nil
 	}
 
 	return nil, errors.New("Could not crop image")
