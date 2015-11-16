@@ -7,25 +7,57 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/disintegration/imaging",
-			"Rev": "9e67388aae65b9dc4e563beff827e19755deae6a"
+			"Rev": "546cb3c5137b3f1232e123a26aa033aade6b3066"
+		},
+		{
+			"ImportPath": "github.com/golang/freetype/raster",
+			"Comment": "release-120-gf29eb11",
+			"Rev": "f29eb116deb328d02ee5c573f02d442ca67d5532"
+		},
+		{
+			"ImportPath": "github.com/golang/freetype/truetype",
+			"Comment": "release-120-gf29eb11",
+			"Rev": "f29eb116deb328d02ee5c573f02d442ca67d5532"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
-			"Rev": "14f550f51af52180c2eefed15e5fd18d63c0a64a"
+			"Rev": "1c83b3eabd45b6d76072b66b746c20815fb2872d"
 		},
 		{
 			"ImportPath": "github.com/gorilla/mux",
-			"Rev": "14cafe28513321476c73967a5a4f3454b6129c46"
+			"Rev": "9c068cf16d982f8bd444b8c352acbeec34c4fe5b"
+		},
+		{
+			"ImportPath": "github.com/lazywei/go-opencv/opencv",
+			"Rev": "08a8c82102d3cbb4207efcc5933caaf2deab40d9"
+		},
+		{
+			"ImportPath": "github.com/llgcode/draw2d",
+			"Comment": "v1-64-g56180d8",
+			"Rev": "56180d8101c12c0a8f002bda2e25c499f057d6ab"
+		},
+		{
+			"ImportPath": "github.com/muesli/smartcrop",
+			"Comment": "0.1.1-39-gcbd9e43",
+			"Rev": "cbd9e43cb10b0d3973f73a4f6450606cb11d5889"
+		},
+		{
+			"ImportPath": "github.com/nfnt/resize",
+			"Rev": "dc93e1b98c579d90ee2fa15c1fd6dac34f6e7899"
 		},
 		{
 			"ImportPath": "github.com/onsi/ginkgo",
-			"Comment": "v1.2.0-11-gd94e2f4",
-			"Rev": "d94e2f4000332f62b356ecb2840c98f4218f5358"
+			"Comment": "v1.2.0-beta",
+			"Rev": "0efbdc3a60137c0757b84e994a56037378170913"
 		},
 		{
 			"ImportPath": "github.com/onsi/gomega",
-			"Comment": "v1.0-52-ga2ab864",
-			"Rev": "a2ab8644e0b6a33df2cbe44673bd0f6ebba9abc3"
+			"Comment": "v1.0-43-gf4f1cae",
+			"Rev": "f4f1caefe95e396ea97b72dd6c52973ae4a6978c"
+		},
+		{
+			"ImportPath": "github.com/sharpner/matcher",
+			"Rev": "dec98f1d0cc8f78bc697bdff6259b31a91779a1e"
 		},
 		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",
@@ -33,24 +65,33 @@
 		},
 		{
 			"ImportPath": "github.com/yvasiyarov/gorelic",
-			"Comment": "v0.0.6-22-g9fe479b",
-			"Rev": "9fe479b46261664fba456a6aacdc31933b94cfd1"
+			"Comment": "v0.0.6-38-g899fe5e",
+			"Rev": "899fe5e1be7138f2440c28e77532f0635c1249f1"
 		},
 		{
 			"ImportPath": "github.com/yvasiyarov/newrelic_platform_go",
-			"Rev": "cef0ebd22fb48453114ba645d0fb80fea6e670de"
+			"Rev": "db03d6dfd965ebc22dbfd910567c641b326ff055"
 		},
 		{
 			"ImportPath": "golang.org/x/image/bmp",
-			"Rev": "8e3389fa81abf8e318abefa17054df807e5c5692"
+			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
+		},
+		{
+			"ImportPath": "golang.org/x/image/font",
+			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
+		},
+		{
+			"ImportPath": "golang.org/x/image/math/fixed",
+			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
 		},
 		{
 			"ImportPath": "golang.org/x/image/tiff",
-			"Rev": "8e3389fa81abf8e318abefa17054df807e5c5692"
+			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
 		},
 		{
 			"ImportPath": "gopkg.in/mgo.v2",
-			"Rev": "dc255bb679efa273b6544a03261c4053505498a4"
+			"Comment": "r2015.10.05-1-g4d04138",
+			"Rev": "4d04138ffef2791c479c0c8bbffc30b34081b8d9"
 		}
 	]
 }
