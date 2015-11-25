@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"log"
 
 	"github.com/VoycerAG/gridfs-image-server/server/paint"
 	"github.com/disintegration/imaging"
@@ -44,15 +45,11 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 		Prescale:                         true,
 		PrescaleValue:                    400,
 	}
-	/*
-	 *
-	 *  desiredRatio := float64(dstWidth) / float64(dstHeight)
-	 *  targetWidth := 250
-	 *
-	 */
-	/*
-	 *height := int(desiredRatio * float64(targetWidth))
-	 */
+
+	if input.Bounds().Dx() < 400 || input.Bounds().Dy() < 300 {
+		log.Println("input to small, skipping face detection")
+		return imaging.Thumbnail(input, dstWidth, dstHeight, imaging.Lanczos), nil
+	}
 
 	//it only analyzes the image
 	crop, err := smartcrop.NewAnalyzerWithCropSettings(cropSettings).FindBestCrop(input, 400, 300)
