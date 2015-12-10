@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/VoycerAG/gridfs-image-server",
-	"GoVersion": "go1.5.1",
+	"GoVersion": "go1.5.2",
 	"Packages": [
 		"./..."
 	],
@@ -28,6 +28,10 @@
 			"Rev": "a2ab8644e0b6a33df2cbe44673bd0f6ebba9abc3"
 		},
 		{
+			"ImportPath": "github.com/sharpner/matcher",
+			"Rev": "dec98f1d0cc8f78bc697bdff6259b31a91779a1e"
+		},
+		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",
 			"Rev": "c25f46c4b94079672242ec48a545e7ca9ebe3aec"
 		},
@@ -49,8 +53,17 @@
 			"Rev": "8e3389fa81abf8e318abefa17054df807e5c5692"
 		},
 		{
+			"ImportPath": "golang.org/x/net/netutil",
+			"Rev": "d9558e5c97f85372afee28cf2b6059d7d3818919"
+		},
+		{
 			"ImportPath": "gopkg.in/mgo.v2",
 			"Rev": "dc255bb679efa273b6544a03261c4053505498a4"
+		},
+		{
+			"ImportPath": "gopkg.in/tylerb/graceful.v1",
+			"Comment": "v1.2.3",
+			"Rev": "48afeb21e2fcbcff0f30bd5ad6b97747b0fae38e"
 		}
 	]
 }
