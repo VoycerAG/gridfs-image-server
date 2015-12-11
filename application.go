@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 
 	"gopkg.in/mgo.v2"
+	"gopkg.in/tylerb/graceful.v1"
 
 	"github.com/VoycerAG/gridfs-image-server/server"
 )
@@ -52,7 +52,7 @@ func main() {
 
 	log.Printf("Server started. Listening on %d database host is %s\n", *serverPort, *host)
 
-	err = http.ListenAndServe(fmt.Sprintf(":%d", *serverPort), handler)
+	graceful.Run(fmt.Sprintf(":%d", *serverPort), 0, handler)
 	if err != nil {
 		log.Fatal(err)
 	}
