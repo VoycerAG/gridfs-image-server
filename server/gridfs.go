@@ -174,9 +174,15 @@ func (g GridfsStorage) StoreChildImage(
 	if err != nil {
 		return nil, err
 	}
+
 	defer targetfile.Close()
 
-	io.Copy(targetfile, reader)
+	_, err = io.Copy(targetfile, reader)
+
+	if err != nil {
+		targetfile.Abort()
+		return nil, err
+	}
 
 	metadata := bson.M{
 		"width":            imageWidth,

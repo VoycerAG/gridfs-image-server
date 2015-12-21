@@ -210,8 +210,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 
 		var b bytes.Buffer
 		buffer := bufio.NewWriter(&b)
-		writer := io.MultiWriter(w, buffer)
-		controller.Encode(writer)
+		controller.Encode(buffer)
 		buffer.Flush()
 
 		targetfile, err := storage.StoreChildImage(
@@ -230,6 +229,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 			return
 		}
 
+		w.Write(b.Bytes())
 		setCacheHeaders(targetfile, w)
 
 		log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
