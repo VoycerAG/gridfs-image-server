@@ -71,12 +71,12 @@ type Resizer interface {
 
 //newResizerByType returns a resizer for the given
 //type. If an invalid type was given
-//a plainResizer will be created
+//a PlainResizer will be created
 func newResizerByType(resizeType ResizeType, customResizer map[ResizeType]Resizer) Resizer {
 	resizers := map[ResizeType]Resizer{
-		TypeResize: plainResizer{},
-		TypeFit:    fitResizer{},
-		TypeCrop:   cropResizer{},
+		TypeResize: PlainResizer{},
+		TypeFit:    FitResizer{},
+		TypeCrop:   CropResizer{},
 	}
 	log.Println("%s %#v.", "resizers", customResizer)
 
@@ -98,10 +98,11 @@ func newResizerByType(resizeType ResizeType, customResizer map[ResizeType]Resize
 	return resizer
 }
 
-type plainResizer struct {
+//PlainResizer resizes to the given width and height, regardless of the previous image properties
+type PlainResizer struct {
 }
 
-func (p plainResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+func (p PlainResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 && dstHeight < 0 {
 		return nil, fmt.Errorf("Either width or height must be greater zero to keep the existing ratio")
 	}
@@ -119,10 +120,11 @@ func (p plainResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.
 	return imaging.Resize(input, dstWidth, dstHeight, imaging.Lanczos), nil
 }
 
-type fitResizer struct {
+//FitResizer fits the original image into the given bounding box by keeping the original ratio
+type FitResizer struct {
 }
 
-func (f fitResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+func (f FitResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 || dstHeight < 0 {
 		return nil, fmt.Errorf("Please specify both width and height for your target image")
 	}
@@ -141,10 +143,11 @@ func (f fitResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Im
 	return imaging.Resize(input, int(dstWidth), int(dstHeight), imaging.Lanczos), nil
 }
 
-type cropResizer struct {
+//CropResizer scales the image down, and crops it to the given width and height
+type CropResizer struct {
 }
 
-func (c cropResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+func (c CropResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 && dstHeight < 0 {
 		return nil, fmt.Errorf("Either width or height must be greater zero to keep the existing ratio")
 	}
