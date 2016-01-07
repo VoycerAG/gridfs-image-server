@@ -198,7 +198,6 @@ func imageHandler(
 		}
 
 		customResizers := paint.GetCustomResizers()
-		fmt.Printf("%#v", customResizers)
 		controller, err := paint.NewController(foundImage.Data(), customResizers)
 
 		if err != nil {

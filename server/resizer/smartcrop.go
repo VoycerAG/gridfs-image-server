@@ -66,7 +66,7 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 	startX := crop.X
 	startY := crop.Y
 
-	fmt.Printf("Start Position: %d x %d Crop: %#v\n", startX, startY, crop)
+	log.Printf("Cropping Position: %d x %d Crop: (%d|%d) -> (%d|%d)\n", startX, startY, crop.X, crop.Y, crop.X+crop.Width, crop.Y+crop.Height)
 	if sub, ok := input.(subImager); ok {
 		cropImage := sub.SubImage(image.Rect(startX, startY, crop.Width, crop.Height))
 

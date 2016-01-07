@@ -78,11 +78,9 @@ func newResizerByType(resizeType ResizeType, customResizer map[ResizeType]Resize
 		TypeFit:    FitResizer{},
 		TypeCrop:   CropResizer{},
 	}
-	log.Println("%s %#v.", "resizers", customResizer)
 
 	for rtype, resizer := range customResizer {
 		resizers[rtype] = resizer
-		log.Println("%s %#v.", rtype, resizer)
 	}
 
 	resizer, found := resizers[resizeType]
