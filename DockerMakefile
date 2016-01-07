@@ -1,0 +1,10 @@
+ifndef version
+$(error version must be defined. make version=someVersion)
+endif
+
+docker:
+	GOOS=linux GOARCH=amd64 go build -o build/image-server.x64.1.5 application.go
+	docker build -t voycerag/gridfs_image_server .
+	@-docker tag -f voycerag/gridfs_image_server voycerag/gridfs_image_server:$(version) || true
+	@-docker tag -f voycerag/gridfs_image_server voycerag/gridfs_image_server:latest || true
+	rm build/image-server.x64.1.5
