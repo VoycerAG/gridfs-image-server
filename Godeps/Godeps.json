@@ -1,10 +1,15 @@
 {
 	"ImportPath": "github.com/VoycerAG/gridfs-image-server",
-	"GoVersion": "go1.5.1",
+	"GoVersion": "go1.5.2",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
+		{
+			"ImportPath": "github.com/VoycerAG/smartcrop",
+			"Comment": "0.1.1-40-g1d9bc3a",
+			"Rev": "1d9bc3a8db27654654c2a41f4da0929bcd6c63a0"
+		},
 		{
 			"ImportPath": "github.com/disintegration/imaging",
 			"Rev": "546cb3c5137b3f1232e123a26aa033aade6b3066"
@@ -35,11 +40,6 @@
 			"ImportPath": "github.com/llgcode/draw2d",
 			"Comment": "v1-64-g56180d8",
 			"Rev": "56180d8101c12c0a8f002bda2e25c499f057d6ab"
-		},
-		{
-			"ImportPath": "github.com/muesli/smartcrop",
-			"Comment": "0.1.1-39-gcbd9e43",
-			"Rev": "cbd9e43cb10b0d3973f73a4f6450606cb11d5889"
 		},
 		{
 			"ImportPath": "github.com/nfnt/resize",

@@ -7,8 +7,8 @@ import (
 	"log"
 
 	"github.com/VoycerAG/gridfs-image-server/server/paint"
+	"github.com/VoycerAG/smartcrop"
 	"github.com/disintegration/imaging"
-	"github.com/muesli/smartcrop"
 	"github.com/nfnt/resize"
 )
 
