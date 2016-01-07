@@ -54,6 +54,12 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 	//it only analyzes the image
 	crop, err := smartcrop.NewAnalyzerWithCropSettings(cropSettings).FindBestCrop(input, 400, 300)
 	if err != nil {
+		if err == smartcrop.ErrNoFacesFound {
+			log.Println("No faces found, using fallback resizer")
+			fallback := paint.CropResizer{}
+			return fallback.Resize(input, dstWidth, dstHeight)
+		}
+
 		return nil, err
 	}
 
