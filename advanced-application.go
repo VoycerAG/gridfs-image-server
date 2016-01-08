@@ -13,7 +13,6 @@ import (
 // main starts the server and returns an invalid result as exit code
 func main() {
 	haarcascade := flag.String("haarcascade", "", "haarcascade file path")
-
 	flag.Parse()
 
 	if *configurationFilepath == "" {
@@ -25,7 +24,7 @@ func main() {
 		return
 	}
 
-	smartcrop := resizer.NewSmartcrop(*haarcascade)
+	smartcrop := resizer.NewSmartcrop(*haarcascade, paint.CropResizer{})
 	paint.AddResizer(resizer.TypeSmartcrop, smartcrop)
 
 	run(*host, *configurationFilepath, *newrelicKey, *serverPort)

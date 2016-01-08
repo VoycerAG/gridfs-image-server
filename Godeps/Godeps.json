@@ -6,23 +6,8 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "github.com/VoycerAG/smartcrop",
-			"Comment": "0.1.1-40-g1d9bc3a",
-			"Rev": "1d9bc3a8db27654654c2a41f4da0929bcd6c63a0"
-		},
-		{
 			"ImportPath": "github.com/disintegration/imaging",
 			"Rev": "546cb3c5137b3f1232e123a26aa033aade6b3066"
-		},
-		{
-			"ImportPath": "github.com/golang/freetype/raster",
-			"Comment": "release-120-gf29eb11",
-			"Rev": "f29eb116deb328d02ee5c573f02d442ca67d5532"
-		},
-		{
-			"ImportPath": "github.com/golang/freetype/truetype",
-			"Comment": "release-120-gf29eb11",
-			"Rev": "f29eb116deb328d02ee5c573f02d442ca67d5532"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
@@ -35,15 +20,6 @@
 		{
 			"ImportPath": "github.com/lazywei/go-opencv/opencv",
 			"Rev": "08a8c82102d3cbb4207efcc5933caaf2deab40d9"
-		},
-		{
-			"ImportPath": "github.com/llgcode/draw2d",
-			"Comment": "v1-64-g56180d8",
-			"Rev": "56180d8101c12c0a8f002bda2e25c499f057d6ab"
-		},
-		{
-			"ImportPath": "github.com/nfnt/resize",
-			"Rev": "dc93e1b98c579d90ee2fa15c1fd6dac34f6e7899"
 		},
 		{
 			"ImportPath": "github.com/onsi/ginkgo",
@@ -74,14 +50,6 @@
 		},
 		{
 			"ImportPath": "golang.org/x/image/bmp",
-			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
-		},
-		{
-			"ImportPath": "golang.org/x/image/font",
-			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
-		},
-		{
-			"ImportPath": "golang.org/x/image/math/fixed",
 			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
 		},
 		{
