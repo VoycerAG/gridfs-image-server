@@ -105,9 +105,13 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 		height := int(float64(biggestFace.Height()) * scale)
 
 		facePoint := image.Pt(x, y)
-		r := image.Rect(0, 0, x+width, y+height).Add(facePoint)
-		b := input.Bounds().Intersect(r)
-		cropImage := sub.SubImage(b)
+		target := image.Rect(0, 0, int(float64(dstWidth)*scale), int(float64(dstHeight)*scale))
+		r := image.Rect(x, y, x+width, y+height).Add(facePoint)
+		for !r.In(target) && r.Min.X > 0 && r.Min.Y > 0 {
+			r = image.Rect(r.Min.X-1, r.Min.Y-1, r.Max.X+1, r.Max.Y+1)
+		}
+
+		cropImage := sub.SubImage(r)
 		return imaging.Thumbnail(cropImage, dstWidth, dstHeight, imaging.Lanczos), nil
 	}
 
