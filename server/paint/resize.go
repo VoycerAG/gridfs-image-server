@@ -100,6 +100,8 @@ func newResizerByType(resizeType ResizeType, customResizer map[ResizeType]Resize
 type PlainResizer struct {
 }
 
+//Resize with mode plain. Does the acutal resizing and returns the image
+//errors only if dstWidth or dstHeight is invalid
 func (p PlainResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 && dstHeight < 0 {
 		return nil, fmt.Errorf("Either width or height must be greater zero to keep the existing ratio")
@@ -122,6 +124,8 @@ func (p PlainResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.
 type FitResizer struct {
 }
 
+//Resize with mode fit. Does the acutal resizing and returns the image
+//errors only if dstWidth or dstHeight is invalid
 func (f FitResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 || dstHeight < 0 {
 		return nil, fmt.Errorf("Please specify both width and height for your target image")
@@ -145,6 +149,8 @@ func (f FitResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Im
 type CropResizer struct {
 }
 
+//Resize with mode crop. Does the acutal resizing and returns the image
+//errors only if dstWidth or dstHeight is invalid
 func (c CropResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 && dstHeight < 0 {
 		return nil, fmt.Errorf("Either width or height must be greater zero to keep the existing ratio")
