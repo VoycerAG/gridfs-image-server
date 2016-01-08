@@ -6,6 +6,7 @@ import (
 	"image"
 	"log"
 	"os"
+	"time"
 
 	"github.com/VoycerAG/gridfs-image-server/server/paint"
 	"github.com/disintegration/imaging"
@@ -64,6 +65,8 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 		return imaging.Thumbnail(input, dstWidth, dstHeight, imaging.Lanczos), nil
 	}
 
+	start := time.Now()
+
 	scaledInput, scale, err := normalizeInput(input, 1024)
 	if err != nil {
 		return input, err
@@ -102,27 +105,35 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 	if sub, ok := input.(subImager); ok {
 		x := int(float64(biggestFace.X()) * scale)
 		y := int(float64(biggestFace.Y()) * scale)
-		toX := int(float64(biggestFace.X()+biggestFace.Width()) * scale)
-		toY := int(float64(biggestFace.Y()+biggestFace.Height()) * scale)
+		width := int(float64(biggestFace.Width()) * scale)
+		height := int(float64(biggestFace.Height()) * scale)
+		dstWidthScaled := int(float64(dstWidth) * scale)
+		dstHeightScaled := int(float64(dstHeight) * scale)
 
-		centerX := int(float64(input.Bounds().Dx()) * 0.25)
-		centerY := int(float64(input.Bounds().Dy()) * 0.25)
+		translateX := int(float64(dstWidthScaled-width) / 2)
+		translateY := int(float64(dstHeightScaled-height) / 2)
 
-		fmt.Printf("Translation: (%d|%d)\n", centerX, centerY)
+		log.Printf("Translation: (%d|%d)\n", translateX, translateY)
 
-		diffX := x - centerX
+		diffX := x - translateX
 		if diffX < 0 {
-			diffX = 0
+			diffX = x
 		}
 
-		diffY := y - centerY
+		diffY := y - translateY
 		if diffY < 0 {
-			diffY = 0
+			diffY = y
 		}
 
-		fmt.Printf("(%d|%d) to (%d|%d)\n", diffX, diffY, toX+diffX, toY+diffY)
+		toX := x + width + translateX
+		toY := y + height + translateY
 
-		cropImage := sub.SubImage(image.Rect(diffX, diffY, toX+diffX, toY+diffY))
+		log.Printf("Cutout: (%d|%d) to (%d|%d). Face at (%d|%d)\n", diffX, diffY, toX, toY, x, y)
+
+		cropImage := sub.SubImage(image.Rect(diffX, diffY, toX, toY))
+
+		log.Printf("Face detection took %s\n", time.Now().Sub(start))
+
 		return imaging.Thumbnail(cropImage, dstWidth, dstHeight, imaging.Lanczos), nil
 	}
 
