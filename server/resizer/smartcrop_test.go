@@ -69,10 +69,10 @@ var _ = Describe("Smartcrop testsuite", func() {
 	}
 
 	formats := []format{
-		format{Width: 220, Height: 480},
-		format{Width: 500, Height: 500},
-		format{Width: 400, Height: 200},
-		format{Width: 50, Height: 50},
+		{Width: 220, Height: 480},
+		{Width: 500, Height: 500},
+		{Width: 400, Height: 200},
+		{Width: 50, Height: 50},
 	}
 
 	Measure("it will generate multiple face detected images", func(b Benchmarker) {
