@@ -1,2 +1,6 @@
+server/resizer/testimages/*
+server/resizer/testimages_output/*
+!server/resizer/testimages/.gitkeep
+!server/resizer/testimages_output/.gitkeep
 Godeps/_workspace
 Godeps/Readme

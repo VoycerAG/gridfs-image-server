@@ -60,11 +60,6 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 		return nil, fmt.Errorf("Please specify both width and height for your target image")
 	}
 
-	if input.Bounds().Dx() < 400 || input.Bounds().Dy() < 300 {
-		log.Println("input to small, skipping face detection")
-		return imaging.Thumbnail(input, dstWidth, dstHeight, imaging.Lanczos), nil
-	}
-
 	start := time.Now()
 
 	scaledInput, scale, err := normalizeInput(input, 1024)
@@ -93,10 +88,14 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 			continue
 		}
 
-		if biggestFace.Width() < f.Width() {
+		biggestArea := biggestFace.Width() * biggestFace.Height()
+		currentArea := f.Width() * f.Height()
+		if biggestArea < currentArea {
 			biggestFace = f
 		}
 	}
+
+	log.Printf("Faces found %d\n", len(faces))
 
 	if biggestFace == nil {
 		return nil, ErrNoFacesFound
@@ -129,11 +128,9 @@ func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (im
 		toY := y + height + translateY
 
 		log.Printf("Cutout: (%d|%d) to (%d|%d). Face at (%d|%d)\n", diffX, diffY, toX, toY, x, y)
-
-		cropImage := sub.SubImage(image.Rect(diffX, diffY, toX, toY))
-
 		log.Printf("Face detection took %s\n", time.Now().Sub(start))
 
+		cropImage := sub.SubImage(image.Rect(diffX, diffY, toX, toY))
 		return imaging.Thumbnail(cropImage, dstWidth, dstHeight, imaging.Lanczos), nil
 	}
 
