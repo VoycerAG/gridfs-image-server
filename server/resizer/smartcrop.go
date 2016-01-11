@@ -6,6 +6,7 @@ import (
 	"image"
 	"log"
 	"os"
+	"time"
 
 	"github.com/VoycerAG/gridfs-image-server/server/paint"
 	"github.com/disintegration/imaging"
@@ -41,7 +42,7 @@ func normalizeInput(input image.Image, maxSize int) (image.Image, float64, error
 		scale = float64(input.Bounds().Dy()) / float64(maxSize)
 	}
 
-	log.Printf("Normalizing to %dx%d\n", int(float64(input.Bounds().Dx())/scale), int(float64(input.Bounds().Dy())/scale))
+	fmt.Printf("Normalizing to %dx%d\n", int(float64(input.Bounds().Dx())/scale), int(float64(input.Bounds().Dy())/scale))
 	resized := imaging.Resize(input, int(float64(input.Bounds().Dx())/scale), int(float64(input.Bounds().Dy())/scale), imaging.Lanczos)
 
 	return resized, scale, nil
@@ -72,6 +73,8 @@ func (s smartcropResizer) smartResize(input image.Image, dstWidth, dstHeight int
 	if dstWidth < 0 || dstHeight < 0 {
 		return nil, fmt.Errorf("Please specify both width and height for your target image")
 	}
+
+	start := time.Now()
 
 	scaledInput, scale, err := normalizeInput(input, 1024)
 	if err != nil {
@@ -117,15 +120,31 @@ func (s smartcropResizer) smartResize(input image.Image, dstWidth, dstHeight int
 		y := int(float64(biggestFace.Y()) * scale)
 		width := int(float64(biggestFace.Width()) * scale)
 		height := int(float64(biggestFace.Height()) * scale)
+		dstWidthScaled := int(float64(dstWidth) * scale)
+		dstHeightScaled := int(float64(dstHeight) * scale)
 
-		facePoint := image.Pt(x, y)
-		target := image.Rect(0, 0, int(float64(dstWidth)*scale), int(float64(dstHeight)*scale))
-		r := image.Rect(x, y, x+width, y+height).Add(facePoint)
-		for !r.In(target) && r.Min.X > 0 && r.Min.Y > 0 {
-			r = image.Rect(r.Min.X-1, r.Min.Y-1, r.Max.X+1, r.Max.Y+1)
+		translateX := int(float64(dstWidthScaled-width) / 2)
+		translateY := int(float64(dstHeightScaled-height) / 2)
+
+		log.Printf("Translation: (%d|%d)\n", translateX, translateY)
+
+		diffX := x - translateX
+		if diffX < 0 {
+			diffX = x
 		}
 
-		cropImage := sub.SubImage(r)
+		diffY := y - translateY
+		if diffY < 0 {
+			diffY = y
+		}
+
+		toX := x + width + translateX
+		toY := y + height + translateY
+
+		log.Printf("Cutout: (%d|%d) to (%d|%d). Face at (%d|%d)\n", diffX, diffY, toX, toY, x, y)
+		log.Printf("Face detection took %s\n", time.Now().Sub(start))
+
+		cropImage := sub.SubImage(image.Rect(diffX, diffY, toX, toY))
 		return imaging.Thumbnail(cropImage, dstWidth, dstHeight, imaging.Lanczos), nil
 	}
 
