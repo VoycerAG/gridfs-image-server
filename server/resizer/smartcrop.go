@@ -58,11 +58,11 @@ func NewSmartcrop(haarcascade string, fallbackResizer paint.Resizer) paint.Resiz
 func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	res, err := s.smartResize(input, dstWidth, dstHeight)
 	if err != nil {
-		if err == ErrNoFacesFound {
-			return s.fallbackResizer.Resize(input, dstWidth, dstHeight)
+		if err != ErrNoFacesFound {
+			log.Printf("Unexpected error %s\n", err.Error())
 		}
 
-		return nil, err
+		return s.fallbackResizer.Resize(input, dstWidth, dstHeight)
 	}
 
 	return res, err
