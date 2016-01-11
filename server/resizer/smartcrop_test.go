@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/VoycerAG/gridfs-image-server/server/paint"
 	. "github.com/VoycerAG/gridfs-image-server/server/resizer"
 
 	. "github.com/onsi/ginkgo"
@@ -77,7 +78,7 @@ var _ = Describe("Smartcrop testsuite", func() {
 
 	Measure("it will generate multiple face detected images", func(b Benchmarker) {
 		b.Time("runtime", func() {
-			resizer := NewSmartcrop(haarCascade, nil)
+			resizer := NewSmartcrop(haarCascade, paint.CropResizer{})
 			facesFound := 0
 			noFacesFound := 0
 			errors := 0

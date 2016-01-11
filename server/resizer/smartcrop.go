@@ -54,7 +54,21 @@ func NewSmartcrop(haarcascade string, fallbackResizer paint.Resizer) paint.Resiz
 	return &smartcropResizer{haarcascade: haarcascade, fallbackResizer: fallbackResizer}
 }
 
+//Resize will try to resize via face detection, if no face got found, it will use the fallback resizer
 func (s smartcropResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+	res, err := s.smartResize(input, dstWidth, dstHeight)
+	if err != nil {
+		if err == ErrNoFacesFound {
+			return s.fallbackResizer.Resize(input, dstWidth, dstHeight)
+		}
+
+		return nil, err
+	}
+
+	return res, err
+}
+
+func (s smartcropResizer) smartResize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 || dstHeight < 0 {
 		return nil, fmt.Errorf("Please specify both width and height for your target image")
 	}
