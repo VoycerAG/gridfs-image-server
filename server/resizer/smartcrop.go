@@ -16,6 +16,8 @@ import (
 const (
 	//TypeSmartcrop will use magic to find the center of attention
 	TypeSmartcrop paint.ResizeType = "smartcrop"
+	//how much of the original image must be "face"
+	faceImageTreshold = 0.03
 )
 
 var (
@@ -113,6 +115,14 @@ func (s smartcropResizer) smartResize(input image.Image, dstWidth, dstHeight int
 
 	if biggestFace == nil {
 		return nil, ErrNoFacesFound
+	}
+
+	faceArea := biggestFace.Width() * biggestFace.Height()
+	imagePixels := scaledInput.Bounds().Dx() * scaledInput.Bounds().Dy()
+
+	faceAreaPercentage := float64(faceArea) / float64(imagePixels)
+	if faceAreaPercentage < faceImageTreshold {
+		return nil, errors.New(fmt.Sprintf("face area to small: %.2f.\n", faceAreaPercentage))
 	}
 
 	if sub, ok := input.(subImager); ok {
