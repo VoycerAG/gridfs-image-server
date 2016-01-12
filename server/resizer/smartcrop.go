@@ -117,7 +117,7 @@ func (s smartcropResizer) smartResize(input image.Image, dstWidth, dstHeight int
 
 	faceAreaPercentage := float64(faceArea) / float64(imagePixels)
 	if faceAreaPercentage < faceImageTreshold {
-		return nil, errors.New(fmt.Sprintf("face area too small: %.2f.\n", faceAreaPercentage))
+		return nil, fmt.Errorf("face area too small: %.2f.\n", faceAreaPercentage)
 	}
 
 	if sub, ok := input.(subImager); ok {
