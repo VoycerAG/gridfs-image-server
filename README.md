@@ -13,17 +13,40 @@ Compilation:
 
 Install project using ```go get github.com/VoycerAG/gridfs-image-server```
 
+
+Face Recognition:
+----
+The image server can provide experimental face detection for all images. In order to use this feature you need to install 
+openCV in order for the compilation to succeed. This will disable cross compilation compatibilities, since it makes heave use of cgo.
+
+The current algorithm is pretty unconfident and only selects faces if it is about 90% sure that it will actually improve results. This is to be improved in future releases.
+## Dependencies on Linux:
+```
+libcv-dev libopencv-dev libopencv-contrib-dev libhighgui-dev libopencv-photo-dev libopencv-imgproc-dev libopencv-stitching-dev libopencv-superres-dev libopencv-ts-dev libopencv-videostab-dev 
+```
+
+## Dependencies on Mac OS X:
+```
+brew tap homebrew/science
+brew install opencv
+```
+
+After you have installed all dependencies you can use ```go get -tags=facedetection github.com/VoycerAG/gridfs-image-server``` to install the server with face detection support.
+
 Instructions
 -----
 ```
   -config string
-      path to the configuration file (default "configuration.json")
+    	path to the configuration file (default "configuration.json")
   -host string
-      the database host with an optional port, localhost would suffice (default "localhost:27017")
+    	the database host with an optional port, localhost would suffice (default "localhost:27017")
   -license string
-      your newrelic license key in order to enable monitoring
+    	your newrelic license key in order to enable monitoring
   -port int
-      the server port where we will serve images (default 8000)
+    	the server port where we will serve images (default 8000)
+	(only with buildtag +facedetection)
+  -haarcascade string 
+    	haarcascade file path
 ```
 
 Image Server Configuration

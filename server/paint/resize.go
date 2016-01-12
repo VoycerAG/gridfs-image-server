@@ -3,6 +3,8 @@ package paint
 import (
 	"fmt"
 	"image"
+	"log"
+	"sync"
 
 	"github.com/disintegration/imaging"
 )
@@ -14,36 +16,71 @@ type ResizeType string
 //AvailableResizeTypes contains a map with both key and value
 //of all available resize types
 //simply check with _, found := AvaiableResizeTypes[ResizeType]
-var AvailableResizeTypes = map[ResizeType]ResizeType{
+var defaultAvailableResizeTypes = map[ResizeType]ResizeType{
 	TypeResize: TypeResize,
 	TypeCrop:   TypeCrop,
 	TypeFit:    TypeFit,
 }
 
+var extraAllowedTypes = map[ResizeType]Resizer{}
+var extraResizerLock = sync.Mutex{}
+
 const (
-	// TypeResize will either force the given sizes, or resize via original ratio when either height or width is not specified
+	//TypeResize will either force the given sizes, or resize via original ratio when either height or width is not specified
 	TypeResize ResizeType = "resize"
-	// TypeCrop will generate an image with exact sizes, but only a part of the image is visible
+	//TypeCrop will generate an image with exact sizes, but only a part of the image is visible
 	TypeCrop ResizeType = "crop"
 	//TypeFit will resize the image according to the original ratio, but will not exceed the given bounds
 	TypeFit ResizeType = "fit"
 )
 
+//AddResizer allows a custom resizer to use
+func AddResizer(resizeType ResizeType, resizer Resizer) {
+	extraResizerLock.Lock()
+	defer extraResizerLock.Unlock()
+	log.Printf("Registering additional resizer %s\n", resizeType)
+	extraAllowedTypes[resizeType] = resizer
+}
+
+//GetAvailableTypes returns all available types
+func GetAvailableTypes() map[ResizeType]ResizeType {
+	extraResizerLock.Lock()
+	defer extraResizerLock.Unlock()
+	result := defaultAvailableResizeTypes
+	for rtype := range extraAllowedTypes {
+		result[rtype] = rtype
+	}
+
+	return result
+}
+
+//GetCustomResizers returns a read only list of custom resizers
+func GetCustomResizers() map[ResizeType]Resizer {
+	extraResizerLock.Lock()
+	defer extraResizerLock.Unlock()
+
+	return extraAllowedTypes
+}
+
 //Resizer can resize an image
 //dstWidth and dstHeight are the desired output values
 //but it is not promised that the output image has exactly those bounds
-type resizer interface {
+type Resizer interface {
 	Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error)
 }
 
 //newResizerByType returns a resizer for the given
 //type. If an invalid type was given
-//a plainResizer will be created
-func newResizerByType(resizeType ResizeType) resizer {
-	resizers := map[ResizeType]resizer{
-		TypeResize: plainResizer{},
-		TypeFit:    fitResizer{},
-		TypeCrop:   cropResizer{},
+//a PlainResizer will be created
+func newResizerByType(resizeType ResizeType, customResizer map[ResizeType]Resizer) Resizer {
+	resizers := map[ResizeType]Resizer{
+		TypeResize: PlainResizer{},
+		TypeFit:    FitResizer{},
+		TypeCrop:   CropResizer{},
+	}
+
+	for rtype, resizer := range customResizer {
+		resizers[rtype] = resizer
 	}
 
 	resizer, found := resizers[resizeType]
@@ -59,10 +96,13 @@ func newResizerByType(resizeType ResizeType) resizer {
 	return resizer
 }
 
-type plainResizer struct {
+//PlainResizer resizes to the given width and height, regardless of the previous image properties
+type PlainResizer struct {
 }
 
-func (p plainResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+//Resize with mode plain. Does the acutal resizing and returns the image
+//errors only if dstWidth or dstHeight is invalid
+func (p PlainResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 && dstHeight < 0 {
 		return nil, fmt.Errorf("Either width or height must be greater zero to keep the existing ratio")
 	}
@@ -80,10 +120,13 @@ func (p plainResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.
 	return imaging.Resize(input, dstWidth, dstHeight, imaging.Lanczos), nil
 }
 
-type fitResizer struct {
+//FitResizer fits the original image into the given bounding box by keeping the original ratio
+type FitResizer struct {
 }
 
-func (f fitResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+//Resize with mode fit. Does the acutal resizing and returns the image
+//errors only if dstWidth or dstHeight is invalid
+func (f FitResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 || dstHeight < 0 {
 		return nil, fmt.Errorf("Please specify both width and height for your target image")
 	}
@@ -102,10 +145,13 @@ func (f fitResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Im
 	return imaging.Resize(input, int(dstWidth), int(dstHeight), imaging.Lanczos), nil
 }
 
-type cropResizer struct {
+//CropResizer scales the image down, and crops it to the given width and height
+type CropResizer struct {
 }
 
-func (c cropResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
+//Resize with mode crop. Does the acutal resizing and returns the image
+//errors only if dstWidth or dstHeight is invalid
+func (c CropResizer) Resize(input image.Image, dstWidth, dstHeight int) (image.Image, error) {
 	if dstWidth < 0 && dstHeight < 0 {
 		return nil, fmt.Errorf("Either width or height must be greater zero to keep the existing ratio")
 	}

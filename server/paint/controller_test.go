@@ -50,7 +50,7 @@ var _ = Describe("Controller to resize all types of images", func() {
 		It("should resize normal image.jpg", func() {
 			testFile, err := os.Open("../testdata/image.jpg")
 			Expect(err).ToNot(HaveOccurred())
-			controller, err := NewController(testFile)
+			controller, err := NewController(testFile, map[ResizeType]Resizer{})
 			Expect(err).ToNot(HaveOccurred())
 			controller.Resize(TypeResize, 20, 10)
 			Expect(controller.Image().Bounds().Dx()).To(Equal(20))
@@ -71,7 +71,7 @@ var _ = Describe("Controller to resize all types of images", func() {
 		It("should resize normal non-animated.gif", func() {
 			testFile, err := os.Open("../testdata/non-animated.gif")
 			Expect(err).ToNot(HaveOccurred())
-			controller, err := NewController(testFile)
+			controller, err := NewController(testFile, map[ResizeType]Resizer{})
 			Expect(err).ToNot(HaveOccurred())
 			controller.Resize(TypeResize, 20, 10)
 			Expect(controller.Image().Bounds().Dx()).To(Equal(20))
@@ -92,7 +92,7 @@ var _ = Describe("Controller to resize all types of images", func() {
 		It("should resize normal png", func() {
 			testFile, err := os.Open("../testdata/normal.png")
 			Expect(err).ToNot(HaveOccurred())
-			controller, err := NewController(testFile)
+			controller, err := NewController(testFile, map[ResizeType]Resizer{})
 			Expect(err).ToNot(HaveOccurred())
 			controller.Resize(TypeResize, 20, 10)
 			Expect(controller.Image().Bounds().Dx()).To(Equal(20))
@@ -113,7 +113,7 @@ var _ = Describe("Controller to resize all types of images", func() {
 		It("should resize transparent png", func() {
 			testFile, err := os.Open("../testdata/transparent.png")
 			Expect(err).ToNot(HaveOccurred())
-			controller, err := NewController(testFile)
+			controller, err := NewController(testFile, map[ResizeType]Resizer{})
 			Expect(err).ToNot(HaveOccurred())
 			controller.Resize(TypeResize, 20, 10)
 			Expect(controller.Image().Bounds().Dx()).To(Equal(20))
@@ -134,7 +134,7 @@ var _ = Describe("Controller to resize all types of images", func() {
 		It("should resize interlaced png", func() {
 			testFile, err := os.Open("../testdata/interlaced.png")
 			Expect(err).ToNot(HaveOccurred())
-			controller, err := NewController(testFile)
+			controller, err := NewController(testFile, map[ResizeType]Resizer{})
 			Expect(err).ToNot(HaveOccurred())
 			controller.Resize(TypeResize, 20, 10)
 			Expect(controller.Image().Bounds().Dx()).To(Equal(20))
@@ -164,7 +164,7 @@ var _ = Describe("Controller to resize all types of images", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 		It("should be resized by type Resize", func() {
-			controller, err := NewController(testFile)
+			controller, err := NewController(testFile, map[ResizeType]Resizer{})
 			Expect(err).ToNot(HaveOccurred())
 			controller.Resize(TypeResize, 20, 10)
 			Expect(controller.Image().Bounds().Dx()).To(Equal(20))
@@ -186,7 +186,7 @@ var _ = Describe("Controller to resize all types of images", func() {
 		})
 
 		It("should be resized by type Fit", func() {
-			controller, err := NewController(testFile)
+			controller, err := NewController(testFile, map[ResizeType]Resizer{})
 			Expect(err).ToNot(HaveOccurred())
 			controller.Resize(TypeFit, 20, 10)
 			Expect(controller.Image().Bounds().Dx()).To(Equal(13))
@@ -204,7 +204,7 @@ var _ = Describe("Controller to resize all types of images", func() {
 		})
 
 		It("should be resized by type Crop", func() {
-			controller, err := NewController(testFile)
+			controller, err := NewController(testFile, map[ResizeType]Resizer{})
 			Expect(err).ToNot(HaveOccurred())
 			controller.Resize(TypeCrop, 20, 10)
 			Expect(controller.Image().Bounds().Dx()).To(Equal(20))

@@ -131,7 +131,12 @@ func setCacheHeaders(c Cacheable, w http.ResponseWriter) {
 }
 
 // imageHandler the main handler
-func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configuration, storage Storage, imageConfig *Config) {
+func imageHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	requestConfig *Configuration,
+	storage Storage,
+	imageConfig *Config) {
 	log.Printf("Request on %s", r.URL)
 
 	if imageConfig == nil {
@@ -192,7 +197,8 @@ func imageHandler(w http.ResponseWriter, r *http.Request, requestConfig *Configu
 			return
 		}
 
-		controller, err := paint.NewController(foundImage.Data())
+		customResizers := paint.GetCustomResizers()
+		controller, err := paint.NewController(foundImage.Data(), customResizers)
 
 		if err != nil {
 			log.Printf("%d image could not be decoded Reason %s.\n", http.StatusNotFound, err.Error())

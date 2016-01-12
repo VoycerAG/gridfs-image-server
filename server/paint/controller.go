@@ -19,19 +19,20 @@ type Controller interface {
 }
 
 //NewController returns a new instance of a basic controller
-func NewController(data io.Reader) (Controller, error) {
+func NewController(data io.Reader, customResizers map[ResizeType]Resizer) (Controller, error) {
 	rawData, format, err := image.Decode(data)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &basicController{data: rawData, imageFormat: format}, nil
+	return &basicController{data: rawData, imageFormat: format, customResizers: customResizers}, nil
 }
 
 type basicController struct {
-	data        image.Image
-	imageFormat string
+	data           image.Image
+	imageFormat    string
+	customResizers map[ResizeType]Resizer
 }
 
 func (b basicController) Format() string {
@@ -43,7 +44,7 @@ func (b basicController) Image() image.Image {
 }
 
 func (b *basicController) Resize(resizeType ResizeType, width, height int) error {
-	resizer := newResizerByType(resizeType)
+	resizer := newResizerByType(resizeType, b.customResizers)
 	data, err := resizer.Resize(b.data, width, height)
 	if err != nil {
 		return err
