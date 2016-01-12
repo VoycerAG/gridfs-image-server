@@ -86,7 +86,7 @@ var _ = Describe("Smartcrop testsuite", func() {
 			f, formats = formats[len(formats)-1], formats[:len(formats)-1]
 
 			err := filepath.Walk(inputFolder, func(path string, fi os.FileInfo, err error) error {
-				if fi.IsDir() || filepath.Base(path) == ".gitkeep" {
+				if fi != nil && fi.IsDir() || filepath.Base(path) == ".gitkeep" {
 					return nil
 				}
 
