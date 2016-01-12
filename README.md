@@ -1,4 +1,4 @@
-<a href='https://travis-ci.org/VoycerAG/gridfs-image-server'><img src='https://secure.travis-ci.org/VoycerAG/gridfs-image-server.png?branch=master'></a>
+[![Build Status](https://travis-ci.org/VoycerAG/gridfs-image-server.svg?branch=master)](https://travis-ci.org/VoycerAG/gridfs-image-server)
 
 Go Image Server
 ===============
