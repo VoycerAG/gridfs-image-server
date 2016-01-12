@@ -16,9 +16,10 @@ Install project using ```go get github.com/VoycerAG/gridfs-image-server```
 
 Face Recognition:
 ----
-The image server can provide face detection for all images. In order to use this feature you need to install 
+The image server can provide experimental face detection for all images. In order to use this feature you need to install 
 openCV in order for the compilation to succeed. This will disable cross compilation compatibilities, since it makes heave use of cgo.
 
+The current algorithm is pretty unconfident and only selects faces if it is about 90% sure that it will actually improve results. This is to be improved in future releases.
 ## Dependencies on Linux:
 ```
 libcv-dev libopencv-dev libopencv-contrib-dev libhighgui-dev libopencv-photo-dev libopencv-imgproc-dev libopencv-stitching-dev libopencv-superres-dev libopencv-ts-dev libopencv-videostab-dev 
