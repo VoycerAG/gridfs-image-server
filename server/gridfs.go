@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"time"
 
 	"gopkg.in/mgo.v2"
@@ -168,7 +169,11 @@ func (g GridfsStorage) StoreChildImage(
 	original Cacheable,
 	entry *Entry,
 ) (Cacheable, error) {
-	gridfs := g.Connection.DB(database).GridFS("fs")
+	con := g.Connection.Copy()
+	defer con.Close()
+	con.EnsureSafe(&mgo.Safe{W: 1, J: true})
+
+	gridfs := con.DB(database).GridFS("fs")
 	targetfile, err := gridfs.Create(getRandomFilename(imageFormat))
 
 	if err != nil {
@@ -180,6 +185,7 @@ func (g GridfsStorage) StoreChildImage(
 	_, err = io.Copy(targetfile, reader)
 
 	if err != nil {
+		log.Printf("Could not write file completely, cleaning %s\n", targetfile.Name())
 		targetfile.Abort()
 		return nil, err
 	}
