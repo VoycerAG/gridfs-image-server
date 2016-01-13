@@ -165,7 +165,7 @@ func imageHandler(
 		return
 	}
 
-	// we found a image but did not want resizing
+	// we found an image but did not want resizing
 	if found {
 		if !isModified(foundImage, &r.Header) {
 			w.WriteHeader(http.StatusNotModified)
@@ -201,7 +201,7 @@ func imageHandler(
 		controller, err := paint.NewController(foundImage.Data(), customResizers)
 
 		if err != nil {
-			log.Printf("%d image could not be decoded Reason %s.\n", http.StatusNotFound, err.Error())
+			log.Printf("%d image could not be decoded. Reason: [%s].\n", http.StatusNotFound, err.Error())
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -218,11 +218,12 @@ func imageHandler(
 		buffer := bufio.NewWriter(&b)
 		controller.Encode(buffer)
 		buffer.Flush()
+		data := b.Bytes()
 
 		targetfile, err := storage.StoreChildImage(
 			requestConfig.Database,
 			controller.Format(),
-			bytes.NewReader(b.Bytes()),
+			bytes.NewReader(data),
 			controller.Image().Bounds().Dx(),
 			controller.Image().Bounds().Dy(),
 			foundImage,
@@ -236,7 +237,7 @@ func imageHandler(
 		}
 
 		setCacheHeaders(targetfile, w)
-		w.Write(b.Bytes())
+		w.Write(data)
 
 		log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
 	}
