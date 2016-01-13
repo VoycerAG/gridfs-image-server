@@ -235,8 +235,8 @@ func imageHandler(
 			return
 		}
 
-		w.Write(b.Bytes())
 		setCacheHeaders(targetfile, w)
+		w.Write(b.Bytes())
 
 		log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
 	}
