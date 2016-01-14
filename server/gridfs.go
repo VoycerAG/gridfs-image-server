@@ -185,6 +185,7 @@ func (g GridfsStorage) StoreChildImage(
 	_, err = io.Copy(targetfile, reader)
 
 	if err != nil {
+		log.Printf("Error for filename %s with size %dx%d\n", original.Name(), entry.Width, entry.Height)
 		log.Printf("Could not write file completely, cleaning %s\n", targetfile.Name())
 		targetfile.Abort()
 		return nil, err
