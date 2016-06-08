@@ -120,7 +120,6 @@ func imageHandler(
 	// we found an image but did not want resizing
 	if found {
 		w.Header().Set("Etag", foundImage.CacheIdentifier())
-
 		http.ServeContent(w, r, "", foundImage.LastModified(), foundImage.Data())
 		log.Printf("%d Image found, no resizing.\n", http.StatusOK)
 		return
@@ -176,7 +175,7 @@ func imageHandler(
 		)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Printf(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
