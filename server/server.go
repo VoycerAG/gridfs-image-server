@@ -4,10 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/VoycerAG/gridfs-image-server/server/paint"
 	"github.com/gorilla/context"
@@ -84,52 +82,6 @@ func (i imageServer) Handler() http.Handler {
 	return i.handlerMux
 }
 
-// isModified returns true if the file must be delivered, false otherwise.
-func isModified(c Cacheable, header *http.Header) bool {
-	md5 := c.CacheIdentifier()
-	modifiedHeader := header.Get("If-Modified-Since")
-	modifiedTime := time.Now()
-
-	if modifiedHeader != "" {
-		modifiedTime, _ = time.Parse(time.RFC1123, modifiedHeader)
-	}
-
-	// normalize upload date to use the same format as the browser
-	uploadDate, _ := time.Parse(time.RFC1123, c.LastModified().Format(time.RFC1123))
-
-	if header.Get("Cache-Control") == "no-cache" {
-		log.Printf("Is modified, because caching not enabled.")
-		return true
-	}
-
-	if uploadDate.After(modifiedTime) {
-		log.Printf("Is modified, because upload date after modified date.\n")
-		return true
-	}
-
-	if md5 != header.Get("If-None-Match") {
-		log.Printf("Is modified, because md5 mismatch. %s != %s", md5, header.Get("If-None-Match"))
-		return true
-	}
-
-	log.Println("not modified")
-
-	return false
-}
-
-// setCacheHeaders sets the cache headers into the http.ResponseWriter
-func setCacheHeaders(c Cacheable, w http.ResponseWriter) {
-	w.Header().Set("Etag", c.CacheIdentifier())
-	w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", ImageCacheDuration))
-	d, _ := time.ParseDuration(fmt.Sprintf("%ds", ImageCacheDuration))
-
-	expires := c.LastModified().Add(d)
-
-	w.Header().Set("Last-Modified", c.LastModified().Format(time.RFC1123))
-	w.Header().Set("Expires", expires.Format(time.RFC1123))
-	w.Header().Set("Date", c.LastModified().Format(time.RFC1123))
-}
-
 // imageHandler the main handler
 func imageHandler(
 	w http.ResponseWriter,
@@ -167,16 +119,9 @@ func imageHandler(
 
 	// we found an image but did not want resizing
 	if found {
-		if !isModified(foundImage, &r.Header) {
-			w.WriteHeader(http.StatusNotModified)
-			log.Printf("%d Returning cached image.\n", http.StatusNotModified)
-			return
-		}
+		w.Header().Set("Etag", foundImage.CacheIdentifier())
 
-		setCacheHeaders(foundImage, w)
-
-		io.Copy(w, foundImage.Data())
-		foundImage.Data().Close()
+		http.ServeContent(w, r, "", foundImage.LastModified(), foundImage.Data())
 		log.Printf("%d Image found, no resizing.\n", http.StatusOK)
 		return
 	}
@@ -236,8 +181,8 @@ func imageHandler(
 			return
 		}
 
-		setCacheHeaders(targetfile, w)
-		w.Write(data)
+		w.Header().Set("Etag", targetfile.CacheIdentifier())
+		http.ServeContent(w, r, "", targetfile.LastModified(), bytes.NewReader(data))
 
 		log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
 	}
