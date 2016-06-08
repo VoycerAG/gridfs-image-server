@@ -1,10 +1,13 @@
 package server_test
 
 import (
+	"image"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+
+	"image/jpeg"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -13,6 +16,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/sharpner/matcher"
 )
 
 const (
@@ -72,6 +76,25 @@ var _ = Describe("Server", func() {
 		_, err = io.Copy(gf, fp)
 
 		return err
+	}
+
+	loadFileImage := func(filename string) (image.Image, error) {
+		fp, err := os.Open(filename)
+		if err != nil {
+			return nil, err
+		}
+
+		return jpeg.Decode(fp)
+
+	}
+
+	loadMongoImage := func(filename string, gridfs *mgo.GridFS) (image.Image, error) {
+		fp, err := gridfs.Open(filename)
+		if err != nil {
+			return nil, err
+		}
+
+		return jpeg.Decode(fp)
 	}
 
 	Context("Test basic responses", func() {
@@ -134,6 +157,23 @@ var _ = Describe("Server", func() {
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(len(rec.Body.Bytes())).To(BeNumerically(">", 0))
 			Expect(rec.Header().Get("Etag")).ToNot(Equal(""))
+		})
+
+		It("will deliver the original image with an invalid filter", func() {
+			err := loadFixtureFile("./testdata/image.jpg", "test.jpg", gridfs, map[string]string{})
+			Expect(err).ToNot(HaveOccurred())
+			req, err := http.NewRequest("GET", "/"+databaseName+"/test.jpg?size=ruski", nil)
+			Expect(err).ToNot(HaveOccurred())
+			handler := imageServer.Handler()
+			handler.ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(len(rec.Body.Bytes())).To(BeNumerically(">", 0))
+			Expect(rec.Header().Get("Etag")).ToNot(Equal(""))
+			file, err := loadFileImage("./testdata/image.jpg")
+			Expect(err).ToNot(HaveOccurred())
+			mongoFile, err := loadMongoImage("test.jpg", gridfs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(file).To(EqualImage(mongoFile))
 		})
 
 		It("will deliver the resized image with filter", func() {

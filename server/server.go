@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/VoycerAG/gridfs-image-server/server/paint"
 	"github.com/gorilla/context"
@@ -59,7 +58,7 @@ func NewImageServerWithNewRelic(config *Config, storage Storage, licenseKey stri
 				return
 			}
 
-			imageHandler(w, r, requestConfig, storage, z)
+			imageHandler(w, r, *requestConfig, storage, *z)
 		}
 	}(storage, config))
 	http.Handle("/", r)
@@ -84,121 +83,49 @@ func (i imageServer) Handler() http.Handler {
 	return i.handlerMux
 }
 
-// isModified returns true if the file must be delivered, false otherwise.
-func isModified(c Cacheable, header *http.Header) bool {
-	md5 := c.CacheIdentifier()
-	modifiedHeader := header.Get("If-Modified-Since")
-	modifiedTime := time.Now()
-
-	if modifiedHeader != "" {
-		modifiedTime, _ = time.Parse(time.RFC1123, modifiedHeader)
-	}
-
-	// normalize upload date to use the same format as the browser
-	uploadDate, _ := time.Parse(time.RFC1123, c.LastModified().Format(time.RFC1123))
-
-	if header.Get("Cache-Control") == "no-cache" {
-		log.Printf("Is modified, because caching not enabled.")
-		return true
-	}
-
-	if uploadDate.After(modifiedTime) {
-		log.Printf("Is modified, because upload date after modified date.\n")
-		return true
-	}
-
-	if md5 != header.Get("If-None-Match") {
-		log.Printf("Is modified, because md5 mismatch. %s != %s", md5, header.Get("If-None-Match"))
-		return true
-	}
-
-	log.Println("not modified")
-
-	return false
-}
-
-// setCacheHeaders sets the cache headers into the http.ResponseWriter
-func setCacheHeaders(c Cacheable, w http.ResponseWriter) {
-	w.Header().Set("Etag", c.CacheIdentifier())
-	w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", ImageCacheDuration))
-	d, _ := time.ParseDuration(fmt.Sprintf("%ds", ImageCacheDuration))
-
-	expires := c.LastModified().Add(d)
-
-	w.Header().Set("Last-Modified", c.LastModified().Format(time.RFC1123))
-	w.Header().Set("Expires", expires.Format(time.RFC1123))
-	w.Header().Set("Date", c.LastModified().Format(time.RFC1123))
-}
-
-// imageHandler the main handler
 func imageHandler(
 	w http.ResponseWriter,
 	r *http.Request,
-	requestConfig *Configuration,
+	requestConfig Configuration,
 	storage Storage,
-	imageConfig *Config) {
+	imageConfig Config,
+) {
 	log.Printf("Request on %s", r.URL)
 
-	if imageConfig == nil {
-		log.Printf("imageConfiguration object is not set.")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	respondWithImage := func(w http.ResponseWriter, r *http.Request, img Cacheable, data io.ReadSeeker) {
+		w.Header().Set("Etag", img.CacheIdentifier())
+		http.ServeContent(w, r, "", img.LastModified(), data)
+		log.Printf("%d Responding with image.\n", http.StatusOK)
 	}
 
-	resizeEntry, _ := imageConfig.GetEntryByName(requestConfig.FormatName)
+	resizeEntry, err := imageConfig.GetEntryByName(requestConfig.FormatName)
+	if err != nil { // no valid resize configuration in request
+		img, notFoundErr := getOriginalImage(requestConfig.Filename, requestConfig.Database, storage)
 
-	var foundImage Cacheable
-	var notFoundErr error
-
-	if storage.IsValidID(requestConfig.Filename) {
-		foundImage, notFoundErr = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, resizeEntry)
-	} else {
-		foundImage, notFoundErr = storage.FindImageByParentFilename(requestConfig.Database, requestConfig.Filename, resizeEntry)
-	}
-
-	found := notFoundErr == nil
-
-	// case that we do not want resizing and did not find any image
-	if !found && resizeEntry == nil {
-		log.Printf("%d file not found.\n", http.StatusNotFound)
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// we found an image but did not want resizing
-	if found {
-		if !isModified(foundImage, &r.Header) {
-			w.WriteHeader(http.StatusNotModified)
-			log.Printf("%d Returning cached image.\n", http.StatusNotModified)
+		if notFoundErr != nil {
+			log.Printf("%d file not found.\n", http.StatusNotFound)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		setCacheHeaders(foundImage, w)
-
-		io.Copy(w, foundImage.Data())
-		foundImage.Data().Close()
+		respondWithImage(w, r, img, img.Data())
 		log.Printf("%d Image found, no resizing.\n", http.StatusOK)
 		return
 	}
 
-	if !found && resizeEntry != nil {
-		var notFoundErr error
-		if storage.IsValidID(requestConfig.Filename) {
-			foundImage, notFoundErr = storage.FindImageByParentID(requestConfig.Database, requestConfig.Filename, nil)
-		} else {
-			foundImage, notFoundErr = storage.FindImageByParentFilename(requestConfig.Database, requestConfig.Filename, nil)
-		}
+	img, notFoundErr := getResizeImage(*resizeEntry, requestConfig.Filename, requestConfig.Database, storage)
 
-		found = notFoundErr == nil
+	if notFoundErr != nil {
+		img, err := getOriginalImage(requestConfig.Filename, requestConfig.Database, storage)
 
-		if !found {
-			log.Printf("%d Could not find original image.\n", http.StatusNotFound)
+		if err != nil {
+			log.Printf("%d original file not found.\n", http.StatusNotFound)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		customResizers := paint.GetCustomResizers()
-		controller, err := paint.NewController(foundImage.Data(), customResizers)
+		controller, err := paint.NewController(img.Data(), customResizers)
 
 		if err != nil {
 			log.Printf("%d image could not be decoded. Reason: [%s].\n", http.StatusNotFound, err.Error())
@@ -211,7 +138,6 @@ func imageHandler(
 			log.Printf("%d image could not be resized.\n", http.StatusNotFound)
 			w.WriteHeader(http.StatusNotFound)
 			return
-
 		}
 
 		var b bytes.Buffer
@@ -226,21 +152,47 @@ func imageHandler(
 			bytes.NewReader(data),
 			controller.Image().Bounds().Dx(),
 			controller.Image().Bounds().Dy(),
-			foundImage,
+			img,
 			resizeEntry,
 		)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("%d error %s\n", http.StatusInternalServerError, err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		setCacheHeaders(targetfile, w)
-		w.Write(data)
-
+		respondWithImage(w, r, targetfile, bytes.NewReader(data))
 		log.Printf("%d image succesfully resized and returned.\n", http.StatusOK)
+
+		return
 	}
+
+	respondWithImage(w, r, img, img.Data())
+}
+
+func getResizeImage(entry Entry, filename, database string, storage Storage) (Cacheable, error) {
+	var foundImage Cacheable
+	var err error
+	if storage.IsValidID(filename) {
+		foundImage, err = storage.FindImageByParentID(database, filename, &entry)
+	} else {
+		foundImage, err = storage.FindImageByParentFilename(database, filename, &entry)
+	}
+
+	return foundImage, err
+}
+
+func getOriginalImage(filename, database string, storage Storage) (Cacheable, error) {
+	var foundImage Cacheable
+	var err error
+	if storage.IsValidID(filename) {
+		foundImage, err = storage.FindImageByParentID(database, filename, nil)
+	} else {
+		foundImage, err = storage.FindImageByParentFilename(database, filename, nil)
+	}
+
+	return foundImage, err
 }
 
 // just a static welcome handler
