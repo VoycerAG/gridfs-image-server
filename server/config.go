@@ -53,6 +53,10 @@ func (config *Config) validateConfig() error {
 			return fmt.Errorf("The width and height of the configuration element with name \"%s\" are invalid.", element.Name)
 		}
 
+		if element.Name == "" {
+			return fmt.Errorf("Name must be set")
+		}
+
 		if element.Type == "" {
 			return fmt.Errorf("Type must be set")
 		}
