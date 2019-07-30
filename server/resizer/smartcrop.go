@@ -9,7 +9,8 @@ import (
 
 	"github.com/VoycerAG/gridfs-image-server/server/paint"
 	"github.com/disintegration/imaging"
-	"github.com/lazywei/go-opencv/opencv"
+	// todo: Change to it's original repository
+	"github.com/VoycerAG/go-opencv/opencv"
 )
 
 const (

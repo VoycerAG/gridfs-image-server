@@ -18,8 +18,8 @@
 			"Rev": "9c068cf16d982f8bd444b8c352acbeec34c4fe5b"
 		},
 		{
-			"ImportPath": "github.com/lazywei/go-opencv/opencv",
-			"Rev": "08a8c82102d3cbb4207efcc5933caaf2deab40d9"
+			"ImportPath": "github.com/VoycerAG/go-opencv/opencv",
+			"Rev": "5f49dfa26b402b4726108e77174258f0568f9780"
 		},
 		{
 			"ImportPath": "github.com/onsi/ginkgo",
